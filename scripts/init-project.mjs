@@ -14,6 +14,14 @@ if (fs.existsSync(auctionsTestDir)) fs.rmSync(auctionsTestDir, { recursive: true
 const auctionsE2e = path.join('e2e', 'auctions.spec.ts')
 if (fs.existsSync(auctionsE2e)) fs.rmSync(auctionsE2e)
 
+const licenseDeleted = fs.existsSync('LICENSE')
+if (licenseDeleted) fs.rmSync('LICENSE')
+if (fs.existsSync('README.md')) {
+  const readme = fs.readFileSync('README.md', 'utf-8')
+  const strippedReadme = readme.replace(/\n?^## License[ \t]*\r?\n[\s\S]*?(?=^## |(?![\s\S]))/m, '')
+  if (strippedReadme !== readme) fs.writeFileSync('README.md', strippedReadme)
+}
+
 const blockRe = /^.*frontend:auction-block-start[\s\S]*?frontend:auction-block-end.*(?:\n|$)/gm
 const leftoverImportRe = /^import .* from '.*features\/auctions.*'\r?\n/gm
 
@@ -79,10 +87,18 @@ if (name) {
 }
 
 console.log(`Deleted demo feature: ${deletedDemo ? auctionsDir : '(already gone)'}`)
+if (licenseDeleted)
+  console.log(
+    'Deleted LICENSE (the template’s Apache-2.0 — generated projects may relicense freely)',
+  )
 console.log(`Stripped auction blocks from ${stripped} file(s)`)
 console.log(`Pruned the auction namespace from ${prunedLocales} locale catalog(s)`)
 if (name) console.log(`Renamed package to ${name}-frontend`)
 console.log()
 console.log('Next:')
 console.log('  pnpm run typecheck && pnpm run lint && pnpm run test   # should all be green')
+if (licenseDeleted)
+  console.log(
+    '  pick a LICENSE for your project        # the template’s Apache-2.0 file was removed',
+  )
 console.log('  (after backend init-project + sbt test): pnpm run sync-contracts')
