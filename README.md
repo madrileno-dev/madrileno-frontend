@@ -223,3 +223,7 @@ typed client, routing, tests, SSR opt-in. After running the backend's own
 | `sync-contracts`                         | vendor the backend-generated contract                                                         |
 | `generate-pwa-assets`                    | rasterize `public/pwa-icon.svg` into the PWA icon PNGs (also runs in `build`)                 |
 | `init-project`                           | strip the demo for a fresh project                                                            |
+
+## License
+
+The template is licensed under [Apache-2.0](LICENSE), but projects generated from it are unencumbered: you may relicense the code created via `scripts/init-project.mjs` under any terms, with no attribution required. The init script removes the LICENSE file (and this section) so you can add a license of your own choosing.
