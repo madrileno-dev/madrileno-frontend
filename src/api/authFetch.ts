@@ -40,6 +40,9 @@ async function doRefresh(baseUrl: string): Promise<string | null> {
   if (res.status !== 200) return null
   const body = authenticatedResponseSchema.safeParse(await res.json())
   if (!body.success) return null
+  // The session changed while this refresh was in flight (logout, or a login as
+  // someone else): these tokens belong to the old session, so drop them.
+  if (p.refreshToken() !== refreshToken) return null
   p.rotated(body.data.jwt, body.data.refreshToken)
   return body.data.jwt
 }
