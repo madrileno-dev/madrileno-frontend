@@ -138,4 +138,34 @@ describe('the authorized fetch behind the oRPC client', () => {
     expect(user.id).toBe(USER.id)
     expect(sawAuthHeader).toBeNull()
   })
+
+  it('drops refreshed tokens when the session changed while the refresh was in flight', async () => {
+    loggedIn()
+    let refreshStarted = false
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      usersMe401Until('fresh-jwt'),
+      http.post(`${BASE}/v1/auth/refresh-token`, async () => {
+        refreshStarted = true
+        await gate
+        return HttpResponse.json(REFRESHED)
+      }),
+    )
+
+    const call = makeApiClient(BASE).v1.users.me.get()
+    while (!refreshStarted) await new Promise((r) => setTimeout(r, 5))
+    const other = {
+      jwt: 'other-jwt',
+      refreshToken: '33333333-3333-4333-8333-333333333333',
+      email: 'other@example.com',
+    }
+    tokenStore.set(other)
+    release()
+
+    await expect(call).rejects.toThrow()
+    expect(tokenStore.get()).toEqual(other)
+  })
 })
