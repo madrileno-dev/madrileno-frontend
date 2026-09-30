@@ -157,6 +157,10 @@ OpenObserve RUM pairs with the backend's OpenObserve instance: set the
 OpenObserve → Ingestion) and sessions, replays, and browser errors land next
 to the backend traces. Unset = the SDK never loads (it's a lazy chunk).
 
+API calls carry a W3C `traceparent`, so the backend's spans join the
+browser's trace, and the session is tagged with the signed-in user's id (the
+backend's `app.user.id`; never the email), so one id finds both.
+
 ## Security
 
 Deliberate tradeoffs — accept or change them before shipping:
