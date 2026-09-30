@@ -2,6 +2,10 @@ import { env } from '@/env'
 import { tokenStore } from '@/features/auth/tokenStore'
 import { trackRumUser } from './rumUser'
 
+function apiOrigin(): string {
+  return env.apiBaseUrl !== '' ? new URL(env.apiBaseUrl).origin : window.location.origin
+}
+
 export async function initRum(): Promise<void> {
   const cfg = env.rum
   if (cfg === null) return
@@ -25,6 +29,7 @@ export async function initRum(): Promise<void> {
     trackResources: true,
     trackLongTasks: true,
     trackUserInteractions: true,
+    allowedTracingUrls: [{ match: `${apiOrigin()}/v1/`, propagatorTypes: ['tracecontext'] }],
     defaultPrivacyLevel: 'mask-user-input',
   })
   openobserveLogs.init({ ...common, forwardErrorsToLogs: true })
