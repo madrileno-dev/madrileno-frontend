@@ -1,4 +1,6 @@
 import { env } from '@/env'
+import { tokenStore } from '@/features/auth/tokenStore'
+import { trackRumUser } from './rumUser'
 
 export async function initRum(): Promise<void> {
   const cfg = env.rum
@@ -26,5 +28,9 @@ export async function initRum(): Promise<void> {
     defaultPrivacyLevel: 'mask-user-input',
   })
   openobserveLogs.init({ ...common, forwardErrorsToLogs: true })
+  trackRumUser(tokenStore, {
+    set: (id) => openobserveRum.setUser({ id }),
+    clear: () => openobserveRum.clearUser(),
+  })
   openobserveRum.startSessionReplayRecording()
 }
