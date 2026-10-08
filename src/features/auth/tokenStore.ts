@@ -77,6 +77,6 @@ export function registerAuthTokenProvider(): void {
     invalidated: () => {
       tokenStore.set(null)
     },
-    sync: reload,
+    subscribe: tokenStore.subscribe,
   })
 }

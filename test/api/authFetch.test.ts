@@ -18,10 +18,25 @@ beforeAll(() => {
 
 function fakeLockManager() {
   const tails = new Map<string, Promise<unknown>>()
+  const held = new Set<string>()
   return {
-    request: <T>(name: string, callback: () => Promise<T>): Promise<T> => {
+    request: <T>(
+      name: string,
+      optionsOrCallback: { ifAvailable?: boolean } | ((lock: object | null) => Promise<T>),
+      maybeCallback?: (lock: object | null) => Promise<T>,
+    ): Promise<T> => {
+      const options = typeof optionsOrCallback === 'function' ? {} : optionsOrCallback
+      const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback!
+      if (options.ifAvailable === true && held.has(name)) return callback(null)
       const previous = tails.get(name) ?? Promise.resolve()
-      const run = previous.then(callback, callback)
+      const run = previous.then(async () => {
+        held.add(name)
+        try {
+          return await callback({ name })
+        } finally {
+          held.delete(name)
+        }
+      })
       tails.set(
         name,
         run.catch(() => undefined),
@@ -211,7 +226,7 @@ describe('the authorized fetch behind the oRPC client', () => {
     expect(tokenStore.get()?.jwt).toBe('fresh-jwt')
   })
 
-  it('adopts a rotation another tab completed while this tab waited for the lock, instead of replaying the spent token', async () => {
+  it('adopts a rotation another tab completed while this tab waited for the lock, even when its localStorage write lands after the lock is released', async () => {
     installFakeLocks()
     loggedIn()
     let refreshCalls = 0
@@ -229,20 +244,22 @@ describe('the authorized fetch behind the oRPC client', () => {
 
     const otherTab = navigator.locks.request('madrileno.auth.refresh', async () => {
       await otherTabDone
-      window.localStorage.setItem(
-        'madrileno.tokens',
-        JSON.stringify({
-          jwt: 'other-tab-jwt',
-          refreshToken: '33333333-3333-4333-8333-333333333333',
-          email: 'test@example.com',
-        }),
-      )
     })
 
     const call = makeApiClient(BASE).v1.users.me.get()
     await new Promise((r) => setTimeout(r, 10))
     releaseOtherTab()
     await otherTab
+    await new Promise((r) => setTimeout(r, 20))
+    window.localStorage.setItem(
+      'madrileno.tokens',
+      JSON.stringify({
+        jwt: 'other-tab-jwt',
+        refreshToken: '33333333-3333-4333-8333-333333333333',
+        email: 'test@example.com',
+      }),
+    )
+    window.dispatchEvent(new StorageEvent('storage', { key: 'madrileno.tokens' }))
 
     const user = await call
     expect(user.id).toBe(USER.id)

@@ -5,7 +5,7 @@ export interface TokenProvider {
   refreshToken(): string | undefined
   rotated(jwt: string, refreshToken: string): void
   invalidated(): void
-  sync(): void
+  subscribe(listener: () => void): () => void
 }
 
 const REFRESH_LOCK = 'madrileno.auth.refresh'
@@ -48,15 +48,46 @@ async function doRefresh(baseUrl: string): Promise<string | null> {
   return body.data.jwt
 }
 
-function refreshAcrossTabs(baseUrl: string, sentJwt: string | undefined): Promise<string | null> {
+const OTHER_TAB_ROTATION_TIMEOUT_MS = 2000
+
+function awaitOtherTabsRotation(sentJwt: string | undefined): Promise<string | null> {
+  const p = provider
+  if (p === null) return Promise.resolve(null)
+  const rotatedJwt = (): string | null => {
+    const jwt = p.jwt()
+    return jwt !== undefined && jwt !== sentJwt ? jwt : null
+  }
+  const already = rotatedJwt()
+  if (already !== null) return Promise.resolve(already)
+  return new Promise((resolve) => {
+    const settle = (jwt: string | null): void => {
+      clearTimeout(timer)
+      unsubscribe()
+      resolve(jwt)
+    }
+    const unsubscribe = p.subscribe(() => {
+      const jwt = rotatedJwt()
+      if (jwt !== null) settle(jwt)
+      else if (p.jwt() === undefined) settle(null)
+    })
+    const timer = setTimeout(() => settle(null), OTHER_TAB_ROTATION_TIMEOUT_MS)
+  })
+}
+
+async function refreshAcrossTabs(
+  baseUrl: string,
+  sentJwt: string | undefined,
+): Promise<string | null> {
   const locks = typeof navigator === 'undefined' ? undefined : navigator.locks
   if (locks === undefined) return doRefresh(baseUrl)
-  return locks.request(REFRESH_LOCK, async () => {
-    provider?.sync()
-    const current = provider?.jwt()
-    if (current !== undefined && current !== sentJwt) return current
-    return doRefresh(baseUrl)
-  })
+  const own = await locks.request(REFRESH_LOCK, { ifAvailable: true }, async (lock) =>
+    lock === null ? null : { jwt: await doRefresh(baseUrl) },
+  )
+  if (own !== null) return own.jwt
+  return locks.request(
+    REFRESH_LOCK,
+    async () => (await awaitOtherTabsRotation(sentJwt)) ?? doRefresh(baseUrl),
+  )
 }
 
 // Concurrent 401s must share one refresh: the refresh token is single-use.
