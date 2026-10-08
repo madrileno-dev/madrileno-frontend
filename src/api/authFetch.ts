@@ -5,7 +5,10 @@ export interface TokenProvider {
   refreshToken(): string | undefined
   rotated(jwt: string, refreshToken: string): void
   invalidated(): void
+  sync(): void
 }
+
+const REFRESH_LOCK = 'madrileno.auth.refresh'
 
 let provider: TokenProvider | null = null
 
@@ -45,11 +48,22 @@ async function doRefresh(baseUrl: string): Promise<string | null> {
   return body.data.jwt
 }
 
+function refreshAcrossTabs(baseUrl: string, sentJwt: string | undefined): Promise<string | null> {
+  const locks = typeof navigator === 'undefined' ? undefined : navigator.locks
+  if (locks === undefined) return doRefresh(baseUrl)
+  return locks.request(REFRESH_LOCK, async () => {
+    provider?.sync()
+    const current = provider?.jwt()
+    if (current !== undefined && current !== sentJwt) return current
+    return doRefresh(baseUrl)
+  })
+}
+
 // Concurrent 401s must share one refresh: the refresh token is single-use.
 let refreshInFlight: Promise<string | null> | null = null
 
-function refreshOnce(baseUrl: string): Promise<string | null> {
-  refreshInFlight ??= doRefresh(baseUrl).finally(() => {
+function refreshOnce(baseUrl: string, sentJwt: string | undefined): Promise<string | null> {
+  refreshInFlight ??= refreshAcrossTabs(baseUrl, sentJwt).finally(() => {
     refreshInFlight = null
   })
   return refreshInFlight
@@ -75,7 +89,8 @@ export function makeAuthorizedFetch(baseUrl: string): typeof globalThis.fetch {
     }
     // If the token already rotated while we were in flight, retry without refreshing.
     const current = provider.jwt()
-    const jwt = current !== undefined && current !== sentJwt ? current : await refreshOnce(baseUrl)
+    const jwt =
+      current !== undefined && current !== sentJwt ? current : await refreshOnce(baseUrl, sentJwt)
     if (jwt === null) return first
     return attempt(jwt)
   }
