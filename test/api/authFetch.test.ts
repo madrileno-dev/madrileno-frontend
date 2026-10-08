@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { registerAuthTokenProvider, tokenStore } from '@/features/auth/tokenStore'
 import { server } from '../mswServer'
 import { makeApiClient } from '@/api/orpc'
@@ -14,6 +14,44 @@ const REFRESHED = {
 
 beforeAll(() => {
   registerAuthTokenProvider()
+})
+
+function fakeLockManager() {
+  const tails = new Map<string, Promise<unknown>>()
+  const held = new Set<string>()
+  return {
+    request: <T>(
+      name: string,
+      optionsOrCallback: { ifAvailable?: boolean } | ((lock: object | null) => Promise<T>),
+      maybeCallback?: (lock: object | null) => Promise<T>,
+    ): Promise<T> => {
+      const options = typeof optionsOrCallback === 'function' ? {} : optionsOrCallback
+      const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback!
+      if (options.ifAvailable === true && held.has(name)) return callback(null)
+      const previous = tails.get(name) ?? Promise.resolve()
+      const run = previous.then(async () => {
+        held.add(name)
+        try {
+          return await callback({ name })
+        } finally {
+          held.delete(name)
+        }
+      })
+      tails.set(
+        name,
+        run.catch(() => undefined),
+      )
+      return run
+    },
+  }
+}
+
+function installFakeLocks() {
+  Object.defineProperty(navigator, 'locks', { value: fakeLockManager(), configurable: true })
+}
+
+afterEach(() => {
+  delete (navigator as { locks?: unknown }).locks
 })
 
 function loggedIn() {
@@ -167,5 +205,66 @@ describe('the authorized fetch behind the oRPC client', () => {
 
     await expect(call).rejects.toThrow()
     expect(tokenStore.get()).toEqual(other)
+  })
+
+  it('refreshes under the cross-tab lock when Web Locks is available', async () => {
+    installFakeLocks()
+    loggedIn()
+    let refreshCalls = 0
+    server.use(
+      usersMe401Until('fresh-jwt'),
+      http.post(`${BASE}/v1/auth/refresh-token`, () => {
+        refreshCalls += 1
+        return HttpResponse.json(REFRESHED)
+      }),
+    )
+
+    const user = await makeApiClient(BASE).v1.users.me.get()
+
+    expect(user.id).toBe(USER.id)
+    expect(refreshCalls).toBe(1)
+    expect(tokenStore.get()?.jwt).toBe('fresh-jwt')
+  })
+
+  it('adopts a rotation another tab completed while this tab waited for the lock, even when its localStorage write lands after the lock is released', async () => {
+    installFakeLocks()
+    loggedIn()
+    let refreshCalls = 0
+    let releaseOtherTab!: () => void
+    const otherTabDone = new Promise<void>((resolve) => {
+      releaseOtherTab = resolve
+    })
+    server.use(
+      usersMe401Until('other-tab-jwt'),
+      http.post(`${BASE}/v1/auth/refresh-token`, () => {
+        refreshCalls += 1
+        return HttpResponse.json(REFRESHED)
+      }),
+    )
+
+    const otherTab = navigator.locks.request('madrileno.auth.refresh', async () => {
+      await otherTabDone
+    })
+
+    const call = makeApiClient(BASE).v1.users.me.get()
+    await new Promise((r) => setTimeout(r, 10))
+    releaseOtherTab()
+    await otherTab
+    await new Promise((r) => setTimeout(r, 20))
+    window.localStorage.setItem(
+      'madrileno.tokens',
+      JSON.stringify({
+        jwt: 'other-tab-jwt',
+        refreshToken: '33333333-3333-4333-8333-333333333333',
+        email: 'test@example.com',
+      }),
+    )
+    window.dispatchEvent(new StorageEvent('storage', { key: 'madrileno.tokens' }))
+
+    const user = await call
+    expect(user.id).toBe(USER.id)
+    expect(refreshCalls).toBe(0)
+    expect(tokenStore.get()?.jwt).toBe('other-tab-jwt')
+    expect(tokenStore.get()?.refreshToken).toBe('33333333-3333-4333-8333-333333333333')
   })
 })

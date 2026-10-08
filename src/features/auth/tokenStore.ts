@@ -33,13 +33,17 @@ function load(): Tokens | null {
 let current: Tokens | null = load()
 const listeners = new Set<Listener>()
 
+function reload(): void {
+  current = load()
+  listeners.forEach((listener) => listener())
+}
+
 // Another tab rotated or dropped the tokens (the refresh token is single-use,
 // so tabs must not act on a stale one) — adopt its write.
 if (isBrowser) {
   window.addEventListener('storage', (event) => {
     if (event.key !== STORAGE_KEY && event.key !== null) return
-    current = load()
-    listeners.forEach((listener) => listener())
+    reload()
   })
 }
 
@@ -73,5 +77,6 @@ export function registerAuthTokenProvider(): void {
     invalidated: () => {
       tokenStore.set(null)
     },
+    subscribe: tokenStore.subscribe,
   })
 }

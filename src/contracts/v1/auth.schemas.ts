@@ -13,19 +13,20 @@ export const authWithOidcRequestSchema = z.object({
 export type AuthWithOidcRequest = z.infer<typeof authWithOidcRequestSchema>;
 
 export const authWithRefreshTokenRequestSchema = z.object({
-        "refreshToken": z.uuid()});
+        "refreshToken": z.string()});
 export type AuthWithRefreshTokenRequest = z.infer<typeof authWithRefreshTokenRequestSchema>;
 
 export const authenticatedResponseSchema = z.object({
         "jwt": z.string(),
-        "refreshToken": z.uuid(),
+        "refreshToken": z.string(),
         "userCreated": z.boolean()});
 export type AuthenticatedResponse = z.infer<typeof authenticatedResponseSchema>;
 
-export const refreshTokenDtoSchema = z.object({
+export const sessionDtoSchema = z.object({
         "createdAt": z.iso.datetime({ offset: true }),
-        "expiresAt": z.iso.datetime({ offset: true }).nullish(),
+        "expiresAt": z.iso.datetime({ offset: true }),
         "id": z.uuid(),
         "ipAddress": z.string(),
+        "refreshedAt": z.iso.datetime({ offset: true }),
         "userAgent": z.string()});
-export type RefreshTokenDto = z.infer<typeof refreshTokenDtoSchema>;
+export type SessionDto = z.infer<typeof sessionDtoSchema>;

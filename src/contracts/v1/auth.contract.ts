@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { oc } from "@orpc/contract";
 import { errorSchema } from "../schemas";
-import { authWithEmailRequestSchema, authWithFirebaseRequestSchema, authWithOidcRequestSchema, authWithRefreshTokenRequestSchema, authenticatedResponseSchema, refreshTokenDtoSchema } from "./auth.schemas";
+import { authWithEmailRequestSchema, authWithFirebaseRequestSchema, authWithOidcRequestSchema, authWithRefreshTokenRequestSchema, authenticatedResponseSchema, sessionDtoSchema } from "./auth.schemas";
 
 export const v1Auth = {
   dev: {
@@ -108,8 +108,8 @@ export const v1Auth = {
       .route({
         method: 'DELETE',
         path: '/v1/auth/sessions',
-        summary: 'Revoke all refresh tokens for a given user agent',
-        description: 'Revoke sessions by user agent',
+        summary: 'Revoke all sessions for a given user agent',
+        description: 'Revoke every session (refresh-token family) of the authenticated user whose live token carries the given user agent',
         tags: ['Auth'],
         successStatus: 204,
         inputStructure: 'detailed',
@@ -123,21 +123,21 @@ export const v1Auth = {
       .route({
         method: 'GET',
         path: '/v1/auth/sessions',
-        summary: 'Returns active refresh tokens for the authenticated user',
-        description: 'List active sessions. Each entry\'s `createdAt` is when that refresh token was issued — login time, or the timestamp of the last JWT refresh that rotated it (refresh tokens are single-use, so the live one is always the newest in its chain).',
+        summary: 'Returns active sessions for the authenticated user',
+        description: 'List active sessions. A session is a refresh-token family: one login and every rotation descended from it. `id` is the family id and stays stable across rotations; `createdAt` is the login time, `refreshedAt` the last rotation, `expiresAt` when the live token lapses if never refreshed.',
         tags: ['Auth'],
         successStatus: 200,
         inputStructure: 'detailed',
         spec: (current) => ({ ...current, security: [{ bearer: [] }] })
       })
-      .output(z.array(refreshTokenDtoSchema)),
+      .output(z.array(sessionDtoSchema)),
     bySessionId: {
       delete: oc
         .route({
           method: 'DELETE',
           path: '/v1/auth/sessions/{sessionId}',
-          summary: 'Revoke a refresh token by its ID',
-          description: 'Revoke a specific session',
+          summary: 'Revoke a session by its id',
+          description: 'Revoke a specific session: the whole refresh-token family behind the given id, including any rotation that lands concurrently',
           tags: ['Auth'],
           successStatus: 204,
           inputStructure: 'detailed',
