@@ -87,7 +87,7 @@
     "bidLoadMore": "Load more bids",
     "bidLoadingMore": "Loading…",
     "bidBy": "by {bidder} · {when}",
-    "rejectBidTooLow": "Bid too low — someone got there first. The current price has moved.",
+    "rejectBidTooLow": "Bid too low — someone got there first. The minimum is now {min}.",
     "rejectAlreadyHighest": "You already hold the highest bid.",
     "rejectOwnAuction": "You can’t bid on your own auction.",
     "rejectNotOpen": "This auction is no longer open for bids.",
