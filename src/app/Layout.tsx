@@ -4,6 +4,7 @@ import { useTranslations } from 'use-intl'
 import { useAuth } from '@/features/auth/useAuth'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { UsageDataToggle } from '@/components/usage-data-toggle'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { tokens, logout } = useAuth()
@@ -41,6 +42,9 @@ export function Layout({ children }: { children: ReactNode }) {
       <main id="main" tabIndex={-1} className="mx-auto max-w-4xl px-4 py-8 outline-none">
         {children}
       </main>
+      <footer className="mx-auto max-w-4xl px-4 pb-8">
+        <UsageDataToggle />
+      </footer>
     </>
   )
 }

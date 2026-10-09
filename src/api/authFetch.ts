@@ -1,3 +1,5 @@
+// Identical in madrileno-frontend and madrileno-mobile. React Native has no navigator.locks,
+// so on mobile the cross-tab path is skipped and refreshes are single-flight per process.
 import { authenticatedResponseSchema } from '@/contracts/v1/auth.schemas'
 
 export interface TokenProvider {

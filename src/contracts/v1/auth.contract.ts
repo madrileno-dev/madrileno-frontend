@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { oc } from "@orpc/contract";
 import { errorSchema } from "../schemas";
-import { authWithEmailRequestSchema, authWithFirebaseRequestSchema, authWithOidcRequestSchema, authWithRefreshTokenRequestSchema, authenticatedResponseSchema, sessionDtoSchema } from "./auth.schemas";
+import { authWithEmailRequestSchema, authWithFirebaseRequestSchema, authWithOidcRequestSchema, authWithRefreshTokenRequestSchema, authenticatedResponseSchema, logoutRequestSchema, sessionDtoSchema } from "./auth.schemas";
 
 export const v1Auth = {
   dev: {
@@ -55,6 +55,22 @@ export const v1Auth = {
           data: errorSchema.extend({type: z.enum(["result:user-blocked"]).describe("A URI reference identifying the problem type")})
         }
       })
+  },
+  logout: {
+    post: oc
+      .route({
+        method: 'POST',
+        path: '/v1/auth/logout',
+        summary: 'Revoke the session behind a refresh token',
+        description: 'Log out: revokes the session (refresh-token family) the given refresh token belongs to, including any successor a concurrent rotation minted. The refresh token is the credential, so this works after the JWT expired. Unknown, used, expired and already revoked tokens answer 204 as well, so clients can call it fire-and-forget and clear local state either way.',
+        tags: ['Auth'],
+        successStatus: 204,
+        inputStructure: 'detailed'
+      })
+      .input(z.object({
+        body: logoutRequestSchema
+      }))
+      .output(z.void())
   },
   oidc: {
     byProvider: {

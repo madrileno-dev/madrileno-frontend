@@ -157,6 +157,11 @@ OpenObserve RUM pairs with the backend's OpenObserve instance: set the
 OpenObserve → Ingestion) and sessions, replays, and browser errors land next
 to the backend traces. Unset = the SDK never loads (it's a lazy chunk).
 
+**Consent.** RUM and browser logs start with tracking consent `not-granted`:
+nothing is sent until the visitor allows it, through a one-time prompt or the
+footer's usage-data toggle (rendered only when RUM is configured). The choice
+is stored in `localStorage`.
+
 API calls carry a W3C `traceparent`, so the backend's spans join the
 browser's trace, and the session is tagged with the signed-in user's id (the
 backend's `app.user.id`; never the email), so one id finds both.

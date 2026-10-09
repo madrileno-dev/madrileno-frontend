@@ -55,6 +55,19 @@
     "statusOpen": "Open",
     "statusClosed": "Closed",
     "statusCancelled": "Cancelled",
+    "colorDessert": "Dessert",
+    "colorFortified": "Fortified",
+    "colorOrange": "Orange",
+    "colorRed": "Red",
+    "colorRose": "Rosé",
+    "colorSparkling": "Sparkling",
+    "colorWhite": "White",
+    "bottleHalf": "Half bottle",
+    "bottleStandard": "Standard bottle",
+    "bottleMagnum": "Magnum",
+    "bottleDoubleMagnum": "Double magnum",
+    "bottleJeroboam": "Jeroboam",
+    "bottleOther": "Other size",
     "detailBack": "← All auctions",
     "startedAt": "started at {price}",
     "detailLoading": "Loading auction…",
@@ -78,6 +91,17 @@
     "rejectAlreadyHighest": "You already hold the highest bid.",
     "rejectOwnAuction": "You can’t bid on your own auction.",
     "rejectNotOpen": "This auction is no longer open for bids.",
-    "rejectAuthExpired": "Your session expired — log in again to bid."
+    "rejectEnded": "This auction has ended.",
+    "rejectAuthExpired": "Your session expired — log in again to bid.",
+    "rejectNotStarted": "This auction hasn’t started yet.",
+    "rejectNotFound": "This auction no longer exists."
+  },
+  "consent": {
+    "prompt": "Send error reports and performance data to help improve the site?",
+    "allow": "Allow",
+    "decline": "No thanks",
+    "statusGranted": "Usage data is shared: error reports and performance, linked to your account id.",
+    "statusDenied": "Usage data is not shared.",
+    "revoke": "Stop sharing"
   }
 }

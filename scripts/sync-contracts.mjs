@@ -12,7 +12,9 @@ const dest = path.join('src', 'contracts')
 
 if (!fs.existsSync(path.join(source, 'contracts.ts'))) {
   console.error(`No generated contract found at '${source}' (missing contracts.ts).`)
-  console.error('Generate it first: run `sbt test` in the backend repo, then re-run this script.')
+  console.error(
+    'Generate it first: run `sbt testFull` in the backend repo, then re-run this script.',
+  )
   console.error(
     'Different backend location? node scripts/sync-contracts.mjs <path-to>/target/baklava/views/client/orpc/src',
   )
