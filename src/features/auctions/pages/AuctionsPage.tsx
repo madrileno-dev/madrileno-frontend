@@ -4,7 +4,7 @@ import { useTranslations } from 'use-intl'
 import { useInstantFormatter } from '@/api/datetime'
 import { usePriceFormatter } from '@/features/auctions/format'
 import { PAGE_SIZE, useAuctionsPage, type AuctionSummary } from '@/features/auctions/queries'
-import { useAuctionStatusLabel } from '@/features/auctions/status'
+import { useAuctionLabels } from '@/features/auctions/labels'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ function AuctionCard({ auction }: { auction: AuctionSummary }) {
   const t = useTranslations('auction')
   const formatInstant = useInstantFormatter()
   const price = usePriceFormatter()
-  const statusLabel = useAuctionStatusLabel()
+  const label = useAuctionLabels()
   return (
     <li>
       <Card className="h-full">
@@ -29,13 +29,13 @@ function AuctionCard({ auction }: { auction: AuctionSummary }) {
           </CardTitle>
           <CardAction>
             <Badge variant={auction.status === 'Open' ? 'default' : 'secondary'}>
-              {statusLabel(auction.status)}
+              {label.status(auction.status)}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-2 text-sm">
           <p className="text-muted-foreground">
-            {auction.color} · {auction.region} · {auction.producerName}
+            {label.color(auction.color)} · {auction.region} · {auction.producerName}
           </p>
           <p className="mt-auto">
             <strong className="text-base">{price(auction.currentPrice, auction.currency)}</strong>
