@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { Problem } from '@/api/problem'
+import type { BidTooLowExtensionError } from '@/contracts/v1/auctions.schemas'
 import type { Auction, AuctionsPage, BidsPage } from '@/features/auctions/queries'
 
 export const AUCTION_ID = '019ed9bb-0000-7000-8000-000000000001'
@@ -45,12 +45,13 @@ export function bidsPageFixture(ids: readonly string[], hasMore: boolean, offset
   }
 }
 
-export const bidTooLowProblem: Problem = {
+export const bidTooLowProblem: BidTooLowExtensionError = {
   type: 'result:bid-too-low',
   status: 409,
   title: 'Bid too low',
   detail: 'Your bid must be above the current price',
   instance: null,
+  minAmount: 300,
 }
 
 export const listHandler = http.get('*/v1/auctions', () => HttpResponse.json(auctionsPageFixture))

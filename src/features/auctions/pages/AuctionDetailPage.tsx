@@ -22,9 +22,10 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
-function useRejectionMessage(): (error: PlaceBidError) => string {
+function useRejectionMessage(): (error: PlaceBidError, currency: string) => string {
   const t = useTranslations('auction')
-  return (error) => {
+  const price = usePriceFormatter()
+  return (error, currency) => {
     if (!isDefinedError(error)) {
       const problem = problemFrom(error)
       if (problem?.status === 401) return t('rejectAuthExpired')
@@ -33,7 +34,7 @@ function useRejectionMessage(): (error: PlaceBidError) => string {
     const code = error.code
     switch (code) {
       case 'result:bid-too-low':
-        return t('rejectBidTooLow')
+        return t('rejectBidTooLow', { min: price(error.data.minAmount, currency) })
       case 'result:already-highest-bidder':
         return t('rejectAlreadyHighest')
       case 'result:cannot-bid-on-own-auction':
@@ -90,7 +91,7 @@ function PlaceBidForm({ auction }: { auction: Auction }) {
           toast.success(t('bidPlaced'))
         },
         onError: (error) => {
-          toast.error(rejectionMessage(error))
+          toast.error(rejectionMessage(error, auction.currency))
         },
       },
     )
