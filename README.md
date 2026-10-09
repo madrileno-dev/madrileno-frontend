@@ -15,7 +15,7 @@ externalized UI strings (English) via use-intl, ready for i18n.
 ## The contract loop (the whole point)
 
 ```
-Scala router specs ──sbt test──▶ target/baklava/orpc/src/*.ts
+Scala router specs ──sbt testFull──▶ target/baklava/views/client/orpc/src/*.ts
                                         │  pnpm run sync-contracts
                                         ▼
                               src/contracts/ (vendored, committed)
@@ -24,7 +24,7 @@ Scala router specs ──sbt test──▶ target/baklava/orpc/src/*.ts
                          pnpm run typecheck  ← fails on contract drift
 ```
 
-Rename a field in a backend DTO, run `sbt test` + `pnpm run sync-contracts`,
+Rename a field in a backend DTO, run `sbt testFull` + `pnpm run sync-contracts`,
 and `pnpm run typecheck` fails at the exact frontend call site. The contract is
 committed, so CI and fresh clones need no backend checkout.
 
@@ -45,7 +45,7 @@ browse, bid, and watch the typed error envelope when a bid is too low.
 Refreshing the contract after backend changes:
 
 ```bash
-(cd ../madrileno && sbt test)   # regenerates target/baklava/orpc
+(cd ../madrileno && sbt testFull)   # regenerates target/baklava/views/client/orpc
 pnpm run sync-contracts
 pnpm run typecheck               # surfaces any drift as compile errors
 ```

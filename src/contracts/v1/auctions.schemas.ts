@@ -16,6 +16,20 @@ export const bidHistoryEntryDtoSchema = z.object({
         "id": z.uuid()});
 export type BidHistoryEntryDto = z.infer<typeof bidHistoryEntryDtoSchema>;
 
+export const bidTooLowExtensionErrorSchema = z.object({
+        "detail": z.string().describe("Human-readable explanation").nullish(),
+        "instance": z.string().describe("URI reference identifying the specific occurrence").nullish(),
+        "minAmount": z.number(),
+        "status": z.number().int().describe("HTTP status code"),
+        "title": z.string().describe("Short human-readable summary"),
+        "type": z.string().describe("A URI reference identifying the problem type")}).describe("RFC 9457 Problem Details error response");
+export type BidTooLowExtensionError = z.infer<typeof bidTooLowExtensionErrorSchema>;
+
+export const commitUploadRequestSchema = z.object({
+        "fileName": z.string(),
+        "imageId": z.uuid()});
+export type CommitUploadRequest = z.infer<typeof commitUploadRequestSchema>;
+
 export const createAuctionRequestSchema = z.object({
         "appellation": z.string(),
         "bottleCount": z.number().int(),
@@ -35,6 +49,17 @@ export type CreateAuctionRequest = z.infer<typeof createAuctionRequestSchema>;
 export const placeBidRequestSchema = z.object({
         "amount": z.number()});
 export type PlaceBidRequest = z.infer<typeof placeBidRequestSchema>;
+
+export const presignUploadRequestSchema = z.object({
+        "contentLength": z.number().int(),
+        "contentType": z.string()});
+export type PresignUploadRequest = z.infer<typeof presignUploadRequestSchema>;
+
+export const presignedUploadDtoSchema = z.object({
+        "imageId": z.uuid(),
+        "signedHeaders": z.record(z.string(), z.string()),
+        "url": z.string()});
+export type PresignedUploadDto = z.infer<typeof presignedUploadDtoSchema>;
 
 export const reorderImagesRequestSchema = z.object({
         "orderedIds": z.array(z.uuid())});
@@ -93,9 +118,9 @@ export const cursorSchema = z.object({
         "items": z.array(bidHistoryEntryDtoSchema)});
 export type Cursor = z.infer<typeof cursorSchema>;
 
-export const pageSchema2a79 = z.object({
+export const pageSchema = z.object({
         "items": z.array(auctionDtoSchema),
         "limit": z.number().int(),
         "offset": z.number().int(),
         "total": z.number().int()});
-export type Page2a79 = z.infer<typeof pageSchema2a79>;
+export type Page = z.infer<typeof pageSchema>;
