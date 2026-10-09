@@ -51,6 +51,8 @@ export function useBids(auctionId: string) {
   return useInfiniteQuery(bidsInfiniteOptions(orpc, auctionId))
 }
 
+export type PlaceBidError = NonNullable<ReturnType<typeof usePlaceBid>['error']>
+
 export function usePlaceBid(auctionId: string) {
   const queryClient = useQueryClient()
   return useMutation(

@@ -12,7 +12,9 @@ const dest = path.join('src', 'contracts')
 
 if (!fs.existsSync(path.join(source, 'contracts.ts'))) {
   console.error(`No generated contract found at '${source}' (missing contracts.ts).`)
-  console.error('Generate it first: run `sbt test` in the backend repo, then re-run this script.')
+  console.error(
+    'Generate it first: run `sbt testFull` in the backend repo, then re-run this script.',
+  )
   console.error(
     'Different backend location? node scripts/sync-contracts.mjs <path-to>/target/baklava/orpc/src',
   )
@@ -29,7 +31,7 @@ for (const f of files) {
 fs.writeFileSync(
   path.join(dest, 'GENERATED.md'),
   '# Generated — do not edit\n\nVendored from the backend oRPC contract' +
-    ' (`target/baklava/orpc/src`, produced by `sbt test`).\n' +
+    ' (`target/baklava/orpc/src`, produced by `sbt testFull`).\n' +
     'Refresh with `pnpm run sync-contracts`.\n',
 )
 console.log(`Synced ${files.length} contract file(s): ${source} -> ${dest}`)

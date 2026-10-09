@@ -5,32 +5,49 @@ import { toast } from 'sonner'
 import { useTranslations } from 'use-intl'
 import { z } from 'zod'
 import { useInstantFormatter } from '@/api/datetime'
-import { problemFrom, problemTag, type Problem } from '@/api/problem'
+import { isDefinedError } from '@orpc/client'
+import { problemFrom } from '@/api/problem'
 import { useAuth } from '@/features/auth/useAuth'
 import { usePriceFormatter } from '@/features/auctions/format'
-import { useAuction, useBids, usePlaceBid, type Auction } from '@/features/auctions/queries'
-import { useAuctionStatusLabel } from '@/features/auctions/status'
+import { useAuctionLabels } from '@/features/auctions/labels'
+import {
+  useAuction,
+  useBids,
+  usePlaceBid,
+  type Auction,
+  type PlaceBidError,
+} from '@/features/auctions/queries'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
-function useRejectionMessage(): (problem: Problem) => string {
+function useRejectionMessage(): (error: PlaceBidError) => string {
   const t = useTranslations('auction')
-  return (problem) => {
-    switch (problemTag(problem)) {
-      case 'bid-too-low':
+  return (error) => {
+    if (!isDefinedError(error)) {
+      const problem = problemFrom(error)
+      if (problem?.status === 401) return t('rejectAuthExpired')
+      return problem?.detail ?? t('bidFailed')
+    }
+    const code = error.code
+    switch (code) {
+      case 'result:bid-too-low':
         return t('rejectBidTooLow')
-      case 'already-highest-bidder':
+      case 'result:already-highest-bidder':
         return t('rejectAlreadyHighest')
-      case 'cannot-bid-on-own-auction':
+      case 'result:cannot-bid-on-own-auction':
         return t('rejectOwnAuction')
-      case 'auction-not-open':
+      case 'result:auction-not-open':
         return t('rejectNotOpen')
-      case 'authentication-failed':
-        return t('rejectAuthExpired')
-      default:
-        return problem.detail ?? problem.title
+      case 'result:auction-not-started':
+        return t('rejectNotStarted')
+      case 'result:auction-not-found':
+        return t('rejectNotFound')
+      default: {
+        const unhandled: never = code
+        return unhandled
+      }
     }
   }
 }
@@ -71,8 +88,7 @@ function PlaceBidForm({ auction }: { auction: Auction }) {
           toast.success(t('bidPlaced'))
         },
         onError: (error) => {
-          const rejection = problemFrom(error)
-          toast.error(rejection ? rejectionMessage(rejection) : t('bidFailed'))
+          toast.error(rejectionMessage(error))
         },
       },
     )
@@ -157,7 +173,7 @@ function AuctionDetail({ auctionId }: { auctionId: string }) {
   const { data: auction, isPending, isError } = useAuction(auctionId)
   const formatInstant = useInstantFormatter()
   const price = usePriceFormatter()
-  const statusLabel = useAuctionStatusLabel()
+  const label = useAuctionLabels()
 
   if (isPending) return <p className="text-muted-foreground">{t('detailLoading')}</p>
   if (isError) return <p className="text-destructive">{t('detailError')}</p>
@@ -176,12 +192,12 @@ function AuctionDetail({ auctionId }: { auctionId: string }) {
           {auction.vintage != null ? ` ${String(auction.vintage)}` : ''}
         </h1>
         <Badge variant={auction.status === 'Open' ? 'default' : 'secondary'}>
-          {statusLabel(auction.status)}
+          {label.status(auction.status)}
         </Badge>
       </div>
       <p className="text-sm text-muted-foreground">
-        {auction.color} · {auction.region} · {auction.appellation} · {auction.producerName} ·{' '}
-        {auction.bottleCount}× {auction.bottleSize}
+        {label.color(auction.color)} · {auction.region} · {auction.appellation} ·{' '}
+        {auction.producerName} · {auction.bottleCount}× {label.bottleSize(auction.bottleSize)}
       </p>
       {auction.description != null && <p>{auction.description}</p>}
       <p>
