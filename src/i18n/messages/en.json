@@ -87,13 +87,14 @@
     "bidLoadMore": "Load more bids",
     "bidLoadingMore": "Loading…",
     "bidBy": "by {bidder} · {when}",
-    "rejectBidTooLow": "Bid too low — someone got there first. The current price has moved.",
+    "rejectBidTooLow": "Bid too low — someone got there first. The minimum is now {min}.",
     "rejectAlreadyHighest": "You already hold the highest bid.",
     "rejectOwnAuction": "You can’t bid on your own auction.",
     "rejectNotOpen": "This auction is no longer open for bids.",
     "rejectAuthExpired": "Your session expired — log in again to bid.",
     "rejectNotStarted": "This auction hasn’t started yet.",
-    "rejectNotFound": "This auction no longer exists."
+    "rejectNotFound": "This auction no longer exists.",
+    "rejectEnded": "This auction has ended."
   },
   "consent": {
     "prompt": "Send error reports and performance data to help improve the site?",

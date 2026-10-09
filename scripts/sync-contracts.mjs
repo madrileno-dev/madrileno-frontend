@@ -7,7 +7,7 @@ import path from 'node:path'
 const source =
   process.argv[2] ??
   process.env.CONTRACTS_SRC ??
-  path.join('..', 'madrileno', 'target', 'baklava', 'orpc', 'src')
+  path.join('..', 'madrileno', 'target', 'baklava', 'views', 'client', 'orpc', 'src')
 const dest = path.join('src', 'contracts')
 
 if (!fs.existsSync(path.join(source, 'contracts.ts'))) {
@@ -16,7 +16,7 @@ if (!fs.existsSync(path.join(source, 'contracts.ts'))) {
     'Generate it first: run `sbt testFull` in the backend repo, then re-run this script.',
   )
   console.error(
-    'Different backend location? node scripts/sync-contracts.mjs <path-to>/target/baklava/orpc/src',
+    'Different backend location? node scripts/sync-contracts.mjs <path-to>/target/baklava/views/client/orpc/src',
   )
   process.exit(1)
 }
@@ -31,7 +31,7 @@ for (const f of files) {
 fs.writeFileSync(
   path.join(dest, 'GENERATED.md'),
   '# Generated — do not edit\n\nVendored from the backend oRPC contract' +
-    ' (`target/baklava/orpc/src`, produced by `sbt testFull`).\n' +
+    ' (client view, `target/baklava/views/client/orpc/src`, produced by `sbt testFull`).\n' +
     'Refresh with `pnpm run sync-contracts`.\n',
 )
 console.log(`Synced ${files.length} contract file(s): ${source} -> ${dest}`)

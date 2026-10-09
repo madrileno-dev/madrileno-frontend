@@ -91,6 +91,8 @@ describe('auction detail', () => {
     ).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText(/your bid/i), '10')
     await userEvent.click(screen.getByRole('button', { name: /place bid/i }))
-    expect(await screen.findByText(/bid too low — someone got there first/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/someone got there first. The minimum is now €300.00/i),
+    ).toBeInTheDocument()
   })
 })

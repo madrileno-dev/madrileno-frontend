@@ -22,6 +22,10 @@ export const authenticatedResponseSchema = z.object({
         "userCreated": z.boolean()});
 export type AuthenticatedResponse = z.infer<typeof authenticatedResponseSchema>;
 
+export const logoutRequestSchema = z.object({
+        "refreshToken": z.string()});
+export type LogoutRequest = z.infer<typeof logoutRequestSchema>;
+
 export const sessionDtoSchema = z.object({
         "createdAt": z.iso.datetime({ offset: true }),
         "expiresAt": z.iso.datetime({ offset: true }),
