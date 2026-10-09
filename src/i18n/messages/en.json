@@ -91,6 +91,7 @@
     "rejectAlreadyHighest": "You already hold the highest bid.",
     "rejectOwnAuction": "You can’t bid on your own auction.",
     "rejectNotOpen": "This auction is no longer open for bids.",
+    "rejectEnded": "This auction has ended.",
     "rejectAuthExpired": "Your session expired — log in again to bid.",
     "rejectNotStarted": "This auction hasn’t started yet.",
     "rejectNotFound": "This auction no longer exists."

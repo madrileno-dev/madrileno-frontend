@@ -15,7 +15,7 @@ externalized UI strings (English) via use-intl, ready for i18n.
 ## The contract loop (the whole point)
 
 ```
-Scala router specs ──sbt testFull──▶ target/baklava/orpc/src/*.ts
+Scala router specs ──sbt testFull──▶ target/baklava/views/client/orpc/src/*.ts
                                         │  pnpm run sync-contracts
                                         ▼
                               src/contracts/ (vendored, committed)
@@ -45,7 +45,7 @@ browse, bid, and watch the typed error envelope when a bid is too low.
 Refreshing the contract after backend changes:
 
 ```bash
-(cd ../madrileno && sbt testFull)   # regenerates target/baklava/orpc
+(cd ../madrileno && sbt testFull)   # regenerates target/baklava/views/client/orpc
 pnpm run sync-contracts
 pnpm run typecheck               # surfaces any drift as compile errors
 ```

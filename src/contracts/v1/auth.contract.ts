@@ -46,6 +46,10 @@ export const v1Auth = {
           status: 401,
           data: errorSchema.extend({type: z.enum(["result:invalid-token"]).describe("A URI reference identifying the problem type")})
         },
+        'result:provider-unavailable': {
+          status: 503,
+          data: errorSchema.extend({type: z.enum(["result:provider-unavailable"]).describe("A URI reference identifying the problem type")})
+        },
         'result:user-blocked': {
           status: 423,
           data: errorSchema.extend({type: z.enum(["result:user-blocked"]).describe("A URI reference identifying the problem type")})

@@ -40,6 +40,8 @@ function useRejectionMessage(): (error: PlaceBidError) => string {
         return t('rejectOwnAuction')
       case 'result:auction-not-open':
         return t('rejectNotOpen')
+      case 'result:auction-ended':
+        return t('rejectEnded')
       case 'result:auction-not-started':
         return t('rejectNotStarted')
       case 'result:auction-not-found':

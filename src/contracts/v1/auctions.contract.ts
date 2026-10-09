@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { oc } from "@orpc/contract";
 import { errorSchema } from "../schemas";
-import { auctionDtoSchema, auctionImageDtoSchema, bidDtoSchema, createAuctionRequestSchema, cursorSchema, pageSchema2a79, placeBidRequestSchema, reorderImagesRequestSchema } from "./auctions.schemas";
+import { auctionDtoSchema, auctionImageDtoSchema, bidDtoSchema, bidTooLowExtensionErrorSchema, commitUploadRequestSchema, createAuctionRequestSchema, cursorSchema, pageSchema, placeBidRequestSchema, presignUploadRequestSchema, presignedUploadDtoSchema, reorderImagesRequestSchema } from "./auctions.schemas";
 
 export const v1Auctions = {
   get: oc
@@ -17,7 +17,7 @@ export const v1Auctions = {
     .input(z.object({
       query: z.object({status: z.enum(["Cancelled","Closed","Open"]).nullish(), "seller-id": z.uuid().nullish(), "sort-by": z.enum(["CreatedAt","EndsAt","StartingPrice"]).nullish(), "sort-dir": z.enum(["Asc","Desc"]).nullish(), limit: z.number().int().nullish(), offset: z.number().int().nullish()}).optional()
     }))
-    .output(pageSchema2a79),
+    .output(pageSchema),
   post: oc
     .route({
       method: 'POST',
@@ -56,6 +56,10 @@ export const v1Auctions = {
       }))
       .output(z.void())
       .errors({
+        'result:auction-ended': {
+          status: 409,
+          data: errorSchema.extend({type: z.enum(["result:auction-ended"]).describe("A URI reference identifying the problem type")})
+        },
         'result:auction-not-found': {
           status: 404,
           data: errorSchema.extend({type: z.enum(["result:auction-not-found"]).describe("A URI reference identifying the problem type")})
@@ -132,6 +136,10 @@ export const v1Auctions = {
             status: 409,
             data: errorSchema.extend({type: z.enum(["result:already-highest-bidder"]).describe("A URI reference identifying the problem type")})
           },
+          'result:auction-ended': {
+            status: 409,
+            data: errorSchema.extend({type: z.enum(["result:auction-ended"]).describe("A URI reference identifying the problem type")})
+          },
           'result:auction-not-found': {
             status: 404,
             data: errorSchema.extend({type: z.enum(["result:auction-not-found"]).describe("A URI reference identifying the problem type")})
@@ -146,7 +154,7 @@ export const v1Auctions = {
           },
           'result:bid-too-low': {
             status: 409,
-            data: errorSchema.extend({type: z.enum(["result:bid-too-low"]).describe("A URI reference identifying the problem type")})
+            data: bidTooLowExtensionErrorSchema.extend({type: z.enum(["result:bid-too-low"]).describe("A URI reference identifying the problem type")})
           },
           'result:cannot-bid-on-own-auction': {
             status: 403,
@@ -182,13 +190,17 @@ export const v1Auctions = {
         })
         .input(z.object({
           params: z.object({auctionId: z.uuid()}),
-          body: z.object({file: z.file()})
+          body: z.union([z.object({file: z.file()}), z.object({note: z.string()})])
         }))
         .output(auctionImageDtoSchema)
         .errors({
           'result:auction-not-found': {
             status: 404,
             data: errorSchema.extend({type: z.enum(["result:auction-not-found"]).describe("A URI reference identifying the problem type")})
+          },
+          'result:missing-file': {
+            status: 400,
+            data: errorSchema.extend({type: z.enum(["result:missing-file"]).describe("A URI reference identifying the problem type")})
           },
           'result:not-owner': {
             status: 403,
@@ -242,7 +254,69 @@ export const v1Auctions = {
                 data: errorSchema.extend({type: z.enum(["result:image-not-found"]).describe("A URI reference identifying the problem type")})
               }
             })
+        },
+        variants: {
+          bySpec: {
+            content: {
+              get: oc
+                .route({
+                  method: 'GET',
+                  path: '/v1/auctions/{auctionId}/images/{imageId}/variants/{spec}/content',
+                  summary: 'Public: image variant content',
+                  description: 'Stream or redirect to a generated variant of an image. Variants are generated asynchronously after upload, so a freshly uploaded image answers 404 until they exist. Known variant names: Thumb, Medium',
+                  tags: ['Auction images'],
+                  successStatus: 200,
+                  inputStructure: 'detailed'
+                })
+                .input(z.object({
+                  params: z.object({auctionId: z.uuid(), imageId: z.uuid(), spec: z.string()})
+                }))
+                .output(z.string())
+                .errors({
+                  'result:variant-not-found': {
+                    status: 404,
+                    data: errorSchema.extend({type: z.enum(["result:variant-not-found"]).describe("A URI reference identifying the problem type")})
+                  }
+                })
+            }
+          }
         }
+      },
+      commit: {
+        post: oc
+          .route({
+            method: 'POST',
+            path: '/v1/auctions/{auctionId}/images/commit',
+            summary: 'Seller-only: commit a presigned upload',
+            description: 'Register an image whose bytes were uploaded directly to storage through a presigned URL. Committing an image id that is already attached to the same auction answers with that image again.',
+            tags: ['Auction images'],
+            successStatus: 201,
+            inputStructure: 'detailed',
+            spec: (current) => ({ ...current, security: [{ bearer: [] }] })
+          })
+          .input(z.object({
+            params: z.object({auctionId: z.uuid()}),
+            body: commitUploadRequestSchema
+          }))
+          .output(auctionImageDtoSchema)
+          .errors({
+            'result:auction-not-found': {
+              status: 404,
+              data: errorSchema.extend({type: z.enum(["result:auction-not-found"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:image-id-conflict': {
+              status: 409,
+              data: errorSchema.extend({type: z.enum(["result:image-id-conflict"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:not-owner': {
+              status: 403,
+              data: errorSchema.extend({type: z.enum(["result:not-owner"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:object-not-found': {
+              status: 404,
+              data: errorSchema.extend({type: z.enum(["result:object-not-found"]).describe("A URI reference identifying the problem type")})
+            }
+          })
       },
       order: {
         patch: oc
@@ -265,6 +339,42 @@ export const v1Auctions = {
             'result:mismatched-ids': {
               status: 400,
               data: errorSchema.extend({type: z.enum(["result:mismatched-ids"]).describe("A URI reference identifying the problem type")})
+            }
+          })
+      },
+      presign: {
+        post: oc
+          .route({
+            method: 'POST',
+            path: '/v1/auctions/{auctionId}/images/presign',
+            summary: 'Seller-only: presign a direct upload',
+            description: 'Presign a direct-to-storage upload for a new auction image. The client PUTs the bytes to the returned URL with the signed headers, then registers the image with the commit endpoint.',
+            tags: ['Auction images'],
+            successStatus: 201,
+            inputStructure: 'detailed',
+            spec: (current) => ({ ...current, security: [{ bearer: [] }] })
+          })
+          .input(z.object({
+            params: z.object({auctionId: z.uuid()}),
+            body: presignUploadRequestSchema
+          }))
+          .output(presignedUploadDtoSchema)
+          .errors({
+            'result:auction-not-found': {
+              status: 404,
+              data: errorSchema.extend({type: z.enum(["result:auction-not-found"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:invalid-content-length': {
+              status: 400,
+              data: errorSchema.extend({type: z.enum(["result:invalid-content-length"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:invalid-content-type': {
+              status: 400,
+              data: errorSchema.extend({type: z.enum(["result:invalid-content-type"]).describe("A URI reference identifying the problem type")})
+            },
+            'result:not-owner': {
+              status: 403,
+              data: errorSchema.extend({type: z.enum(["result:not-owner"]).describe("A URI reference identifying the problem type")})
             }
           })
       }
