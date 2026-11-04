@@ -52,8 +52,8 @@ the API: they drift from the backend without a compile error.
    ```
 
    - a list item type is the page type indexed: `LoansPage['items'][number]`
-   - a call outside a component, like login, uses `client` from
-     `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`
+   - a one-off call that is not a query or a mutation, like login's, uses
+     `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`
    - times arrive as ISO strings: convert them with `toInstant` or
      `formatInstant` from `src/api/datetime.ts`, never `Date`
 
