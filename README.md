@@ -235,6 +235,7 @@ typed client, routing, tests, SSR opt-in. After running the backend's own
 | `e2e` / `e2e:prod`                       | Playwright smoke vs the dev / built production SSR server (needs the live backend; not in CI) |
 | `smoke:docker`                           | build + run the SSR image, verify healthz, SSR HTML and the container healthcheck             |
 | `sync-contracts`                         | vendor the backend-generated contract                                                         |
+| `check-agents`                           | check the agent skills, `.agents/workspace.md` and the `.claude/skills` link                  |
 | `generate-pwa-assets`                    | rasterize `public/pwa-icon.svg` into the PWA icon PNGs (also runs in `build`)                 |
 | `init-project`                           | strip the demo for a fresh project                                                            |
 

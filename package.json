@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "sync-contracts": "node scripts/sync-contracts.mjs",
+    "check-agents": "node scripts/check-agents.mjs",
     "init-project": "node scripts/init-project.mjs",
     "generate-pwa-assets": "pwa-assets-generator",
     "e2e:prod": "npm run build:ssr && cross-env E2E_PROD=1 playwright test",

@@ -20,6 +20,7 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run lint
       - run: pnpm run format:check
+      - run: pnpm run check-agents
       - run: pnpm run test
       - run: pnpm run build
       - run: pnpm run build:ssr
@@ -46,6 +47,7 @@ jobs:
           ! grep -q '^## License' README.md || { echo "README License section not stripped"; exit 1; }
       - run: pnpm run typecheck
       - run: pnpm run lint
+      - run: pnpm run check-agents
       - run: pnpm run test
       - run: pnpm run build
       - run: pnpm run build:ssr
