@@ -11,8 +11,13 @@ request or response type, a zod schema for an API payload, or a `fetch` call to
 the API: they drift from the backend without a compile error.
 
 1. Sync the contract:
-   - in the backend: `sbt --client testFull` writes
-     `target/baklava/views/client/orpc/src`
+   - in the backend, run the router specs you changed, unfiltered:
+     `sbt --client "testOnly <pkg>.<module>.*"`. Every test run regenerates
+     the whole contract in `target/baklava/views/client/orpc/src` from the
+     last results of every suite, so that is enough.
+   - in a fresh backend checkout there are no stored results yet: run
+     `sbt --client testFull` once first. A synced contract that has lost whole
+     areas, with typecheck failing everywhere, is the sign this was skipped.
    - here: `pnpm run sync-contracts`, which reads `../madrileno`; for a backend
      elsewhere, pass the path:
      `pnpm run sync-contracts <backend>/target/baklava/views/client/orpc/src`

@@ -4,7 +4,8 @@ madrileno backend template (sibling repo `../madrileno`).
 # Ground rules
 
 - The API contract in `src/contracts/` is GENERATED — never edit it. Refresh it
-  with `pnpm run sync-contracts` after the backend's `sbt --client testFull`. If
+  with `pnpm run sync-contracts` after running the backend's specs for the routes
+  you changed (`sbt --client testFull` once in a fresh backend checkout). If
   typecheck breaks after a sync, fix the call sites: the backend routes are the
   source of truth.
 - ALWAYS run `pnpm run typecheck`, `pnpm run lint`, and `pnpm run test` before
