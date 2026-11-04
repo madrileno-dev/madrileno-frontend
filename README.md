@@ -50,6 +50,11 @@ pnpm run sync-contracts
 pnpm run typecheck               # surfaces any drift as compile errors
 ```
 
+Working on the backend and this app from the directory above both? Run
+`./scripts/workspace.scala generate` in the backend: it reads this repo's
+`.agents/workspace.md` and gives the assistant at the top the instructions,
+skills and MCP servers of each repo (see the backend's [`workspace.md`](https://github.com/madrileno-dev/madrileno/blob/main/docs/workspace.md)).
+
 ## SPA by default, SSR when you want it
 
 `pnpm run dev` / `pnpm run build` is a plain SPA — static files, any web server.
