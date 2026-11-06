@@ -6,8 +6,12 @@ import { createLogger, gracefulShutdown, requestLog } from './server-runtime.js'
 
 const isProduction = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 5173)
-const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 25000)
-if (!Number.isInteger(shutdownTimeoutMs) || shutdownTimeoutMs < 0) {
+const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS || 25000)
+if (
+  !Number.isInteger(shutdownTimeoutMs) ||
+  shutdownTimeoutMs < 0 ||
+  shutdownTimeoutMs > 2147483647
+) {
   throw new Error(
     `SHUTDOWN_TIMEOUT_MS must be a whole number of milliseconds, got '${process.env.SHUTDOWN_TIMEOUT_MS}'`,
   )

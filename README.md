@@ -94,7 +94,8 @@ Design notes:
 - **SSR**: `docker build .` (multi-stage, healthcheck on `/healthz`), run with
   `PORT` and `API_BASE_URL`. On SIGTERM the server stops taking connections at
   once (on Kubernetes, give the pod a `preStop` sleep of a few seconds so it
-  leaves the Service endpoints first), lets requests in flight finish and exits 0;
+  leaves the Service endpoints first, and keep that sleep plus the drain under
+  `terminationGracePeriodSeconds`), lets requests in flight finish and exits 0;
   whatever is still open after `SHUTDOWN_TIMEOUT_MS` (default 25000, under
   Kubernetes' 30 s grace period) is cut off and it exits 1. When you stop the
   whole stack, stop this server first and the API only after it has exited:

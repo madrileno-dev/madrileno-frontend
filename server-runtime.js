@@ -1,5 +1,7 @@
 // Logging and shutdown for server.js, kept apart so they can be tested without a build.
 
+import { inspect } from 'node:util'
+
 const traceparent = /^[\da-f]{2}-([\da-f]{32})-[\da-f]{16}-[\da-f]{2}$/
 
 /**
@@ -15,12 +17,12 @@ export function createLogger({
     if (format === 'json') {
       const errorFields =
         error instanceof Error
-          ? { 'error.message': error.message, 'error.stack_trace': error.stack }
+          ? { 'error.message': error.message, 'error.stack_trace': inspect(error) }
           : {}
       write(
         JSON.stringify({
           '@timestamp': new Date().toISOString(),
-          'log.level': level,
+          'log.level': level.toUpperCase(),
           message,
           ...fields,
           ...errorFields,
@@ -28,7 +30,7 @@ export function createLogger({
       )
     } else {
       write(
-        `${level.toUpperCase()} ${message}${error instanceof Error ? `\n${String(error.stack)}` : ''}`,
+        `${level.toUpperCase()} ${message}${error instanceof Error ? `\n${inspect(error)}` : ''}`,
       )
     }
   }
@@ -54,7 +56,8 @@ export function requestLog(log) {
       const nanos = process.hrtime.bigint() - started
       const millis = Math.round(Number(nanos) / 1e5) / 10
       const traceId = traceparent.exec(req.get('traceparent') ?? '')?.[1]
-      log.info(`${req.method} ${path} ${String(res.statusCode)} ${String(millis)} ms`, {
+      const cutOff = res.writableFinished ? '' : ', cut off before the response finished'
+      log.info(`${req.method} ${path} ${String(res.statusCode)} ${String(millis)} ms${cutOff}`, {
         'http.request.method': req.method,
         'url.path': path,
         'http.response.status_code': res.statusCode,

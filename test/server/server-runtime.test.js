@@ -44,6 +44,23 @@ async function eventually(check, timeoutMs = 2000) {
   }
 }
 
+describe('createLogger', () => {
+  it("keeps an error's cause, where fetch puts the reason it failed", () => {
+    const failed = new TypeError('fetch failed', {
+      cause: new Error('connect ECONNREFUSED 127.0.0.1:9000'),
+    })
+    const json = collect()
+    createLogger({ format: 'json', write: json.write }).error('API forward failed', failed)
+    const text = collect()
+    createLogger({ write: text.write }).error('API forward failed', failed)
+
+    const entry = JSON.parse(json.lines[0])
+    assert.equal(entry['log.level'], 'ERROR')
+    assert.match(entry['error.stack_trace'], /ECONNREFUSED/)
+    assert.match(text.lines[0], /^ERROR API forward failed\n[\s\S]*ECONNREFUSED/)
+  })
+})
+
 describe('requestLog', () => {
   it('writes one JSON line per request with method, path, status, duration and trace id', async () => {
     const out = collect()
@@ -58,13 +75,34 @@ describe('requestLog', () => {
     await eventually(() => assert.equal(out.lines.length, 1))
 
     const entry = JSON.parse(out.lines[0])
-    assert.equal(entry['log.level'], 'info')
+    assert.equal(entry['log.level'], 'INFO')
     assert.equal(entry['http.request.method'], 'GET')
     assert.equal(entry['url.path'], '/auctions')
     assert.equal(entry['http.response.status_code'], 201)
     assert.equal(entry.trace_id, '4bf92f3577b34da6a3ce929d0e0e4736')
     assert.equal(typeof entry['event.duration'], 'number')
     assert.ok(!out.lines[0].includes('secret'))
+  })
+
+  it('says in the plain line that a request was cut off before its response', async () => {
+    const out = collect()
+    const entered = signal()
+    const app = express()
+    app.use(requestLog(createLogger({ write: out.write })))
+    app.get('/slow', () => entered.resolve())
+    const { url } = await listen(app)
+
+    const aborted = new AbortController()
+    const request = fetch(`${url}/slow`, { signal: aborted.signal }).catch(() => {})
+    await entered.promise
+    aborted.abort()
+    await request
+    await eventually(() => assert.equal(out.lines.length, 1))
+
+    assert.match(
+      out.lines[0],
+      /^INFO GET \/slow 200 \d+(\.\d+)? ms, cut off before the response finished$/,
+    )
   })
 
   it('writes a plain line by default and leaves /healthz out', async () => {
@@ -122,7 +160,7 @@ describe('gracefulShutdown', () => {
     const socket = net.connect(server.address().port)
     await once(socket, 'connect')
     socket.write('GET /ping HTTP/1.1\r\nHost: localhost\r\n')
-    await eventually(() => assert.ok(server.listening))
+    await new Promise((r) => setTimeout(r, 50))
     drain('SIGTERM')
     socket.write('\r\n')
     let response = ''
