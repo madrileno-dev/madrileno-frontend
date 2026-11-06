@@ -85,7 +85,7 @@
     "bidNone": "No bids yet — be the first.",
     "bidLoading": "Loading bids…",
     "bidError": "Couldn’t load the bid history.",
-    "bidStale": "Couldn’t reach the server, so this list may be incomplete.",
+    "bidStale": "Couldn’t update the bid history, so it may be incomplete.",
     "bidLoadMore": "Load more bids",
     "bidLoadingMore": "Loading…",
     "bidBy": "by {bidder} · {when}",

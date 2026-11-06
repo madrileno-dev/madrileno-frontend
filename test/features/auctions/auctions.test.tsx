@@ -88,7 +88,7 @@ describe('auction detail', () => {
     expect(await screen.findByText(/bidder-0/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /load more bids/i }))
 
-    expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument()
+    expect(await screen.findByText(/couldn’t update the bid history/i)).toBeInTheDocument()
     expect(screen.getByText(/bidder-0/)).toBeInTheDocument()
   })
 
@@ -174,7 +174,7 @@ describe('auction detail', () => {
 
     await bid('160')
 
-    expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument()
+    expect(await screen.findByText(/couldn’t update the bid history/i)).toBeInTheDocument()
     expect(screen.getByText(/no bids yet/i)).toBeInTheDocument()
     expect(screen.queryByText(/couldn’t load the bid history/i)).not.toBeInTheDocument()
   })
