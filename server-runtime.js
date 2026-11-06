@@ -81,16 +81,9 @@ export function requestLog(log) {
  */
 export function gracefulShutdown(server, { log, timeoutMs, exit = (code) => process.exit(code) }) {
   let draining = false
-  const open = new Set()
-  let lastClosed = () => {}
   // A keep-alive connection outlives its response; close each one as it falls idle so close() can complete.
   server.prependListener('request', (_req, res) => {
-    open.add(res)
     if (draining) res.setHeader('Connection', 'close')
-    res.on('close', () => {
-      open.delete(res)
-      if (open.size === 0) setImmediate(() => lastClosed())
-    })
     res.on('finish', () => {
       if (draining) setImmediate(() => server.closeIdleConnections())
     })
@@ -108,9 +101,8 @@ export function gracefulShutdown(server, { log, timeoutMs, exit = (code) => proc
     server.close(() => {
       clearTimeout(deadline)
       log.info('Server closed')
-      const done = () => exit(forced ? 1 : 0)
-      if (open.size === 0) done()
-      else lastClosed = done
+      if (forced) setTimeout(() => exit(1), 100)
+      else exit(0)
     })
     server.closeIdleConnections()
   }
