@@ -64,15 +64,37 @@ describe('auctions list', () => {
     expect(await screen.findByText(/Château Margaux 2015/)).toBeInTheDocument()
 
     up = false
-    act(() => {
-      focusManager.setFocused(false)
-      focusManager.setFocused(true)
-    })
+    try {
+      act(() => {
+        focusManager.setFocused(false)
+        focusManager.setFocused(true)
+      })
 
-    expect(await screen.findByText(/couldn’t refresh the auctions/i)).toBeInTheDocument()
-    expect(screen.getByText(/Château Margaux 2015/)).toBeInTheDocument()
+      expect(await screen.findByText(/couldn’t refresh the auctions/i)).toBeInTheDocument()
+      expect(screen.getByText(/Château Margaux 2015/)).toBeInTheDocument()
+      expect(screen.queryByText(/couldn’t load auctions/i)).not.toBeInTheDocument()
+    } finally {
+      focusManager.setFocused(undefined)
+    }
+  })
+
+  it('offers the way back when the next page fails to load', async () => {
+    server.use(
+      http.get('*/v1/auctions', ({ request }) =>
+        new URL(request.url).searchParams.get('offset') === '0'
+          ? HttpResponse.json({ ...auctionsPageFixture, total: 13 })
+          : HttpResponse.json({ status: 503 }, { status: 503 }),
+      ),
+    )
+    renderApp('/')
+    expect(await screen.findByText(/Château Margaux 2015/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(await screen.findByText(/couldn’t load auctions/i)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /previous/i }))
+
+    expect(await screen.findByText(/Château Margaux 2015/)).toBeInTheDocument()
     expect(screen.queryByText(/couldn’t load auctions/i)).not.toBeInTheDocument()
-    focusManager.setFocused(undefined)
   })
 })
 

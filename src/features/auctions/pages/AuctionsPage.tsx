@@ -61,6 +61,16 @@ export function AuctionsPage() {
       <h1 className="text-2xl font-semibold">{t('listHeading')}</h1>
       {isPending && <p className="text-muted-foreground">{t('loadingList')}</p>}
       {isLoadingError && <p className="text-destructive">{t('errorList')}</p>}
+      {isLoadingError && offset > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+        >
+          {t('prev')}
+        </Button>
+      )}
       {isRefetchError && (
         <p role="status" className="text-sm text-destructive">
           {t('listStale')}

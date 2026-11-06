@@ -73,10 +73,13 @@ the API: they drift from the backend without a compile error.
      and say it may be out of date, as `AuctionsPage` does for the list and
      `AuctionDetailPage` for the auction and its bid history. Show "couldn't load" only on
      `isLoadingError`; `isError` is also true while old data is on screen.
-     For the note, a single query checks `isRefetchError`. An infinite list
-     checks `isError`: a failed "load more" sets `isFetchNextPageError` and
-     leaves `isRefetchError` false, so checking `isRefetchError` would say
-     nothing
+     For the note, a single query checks `isRefetchError`. An infinite list,
+     after returning early on `isLoadingError`, checks `isError`: a failed
+     "load more" sets `isFetchNextPageError` and leaves `isRefetchError`
+     false, so checking `isRefetchError` would say nothing. With
+     `keepPreviousData`, the previous page shows only while the next one
+     loads: if that fails, `data` is gone and `isLoadingError` is true, so
+     keep a way back, as `AuctionsPage` does with "← Previous"
    - a list item type is the page type indexed: `LoansPage['items'][number]`
    - a one-off call that is not a query or a mutation, like login's, uses
      `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`
