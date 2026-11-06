@@ -60,7 +60,7 @@ describe('auctions list', () => {
           : HttpResponse.json({ status: 503 }, { status: 503 }),
       ),
     )
-    renderApp('/')
+    const { unmount } = renderApp('/')
     expect(await screen.findByText(/Château Margaux 2015/)).toBeInTheDocument()
 
     up = false
@@ -74,6 +74,7 @@ describe('auctions list', () => {
       expect(screen.getByText(/Château Margaux 2015/)).toBeInTheDocument()
       expect(screen.queryByText(/couldn’t load auctions/i)).not.toBeInTheDocument()
     } finally {
+      unmount()
       focusManager.setFocused(undefined)
     }
   })
@@ -163,7 +164,9 @@ describe('auction detail', () => {
 
   function rejectedBidAfter(
     detailAfterBid: () => Response,
-    bidsAfterBid: () => Response = () => HttpResponse.json(bidsPageFixture([], false)),
+    bidsAfterBid: (request: Request) => Response = () =>
+      HttpResponse.json(bidsPageFixture([], false)),
+    moreBidsBefore = false,
   ) {
     let bidPlaced = false
     tokenStore.set({ jwt: 'jwt', refreshToken: AUCTION_ID, email: 'bidder@example.com' })
@@ -171,10 +174,12 @@ describe('auction detail', () => {
       http.get(`*/v1/auctions/${AUCTION_ID}`, () =>
         bidPlaced ? detailAfterBid() : HttpResponse.json(auctionFixture),
       ),
-      http.get(`*/v1/auctions/${AUCTION_ID}/bids`, () =>
+      http.get(`*/v1/auctions/${AUCTION_ID}/bids`, ({ request }) =>
         bidPlaced
-          ? bidsAfterBid()
-          : HttpResponse.json(bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b01'], false)),
+          ? bidsAfterBid(request)
+          : HttpResponse.json(
+              bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b01'], moreBidsBefore),
+            ),
       ),
       http.post(`*/v1/auctions/${AUCTION_ID}/bids`, () => {
         bidPlaced = true
@@ -215,7 +220,7 @@ describe('auction detail', () => {
 
   it('keeps the bid history on screen when its refresh after a rejected bid fails', async () => {
     rejectedBidAfter(
-      () => HttpResponse.json({ status: 503 }, { status: 503 }),
+      () => HttpResponse.json(auctionFixture),
       () => HttpResponse.json({ status: 503 }, { status: 503 }),
     )
     renderApp(`/auctions/${AUCTION_ID}`)
@@ -225,5 +230,28 @@ describe('auction detail', () => {
     expect(await screen.findByText(/couldn’t update the bid history/i)).toBeInTheDocument()
     expect(screen.getByText(/bidder-0/)).toBeInTheDocument()
     expect(screen.queryByText(/couldn’t load the bid history/i)).not.toBeInTheDocument()
+  })
+
+  it('refreshes the bid history on load more after its refresh failed', async () => {
+    let recovered = false
+    rejectedBidAfter(
+      () => HttpResponse.json(auctionFixture),
+      (request) => {
+        if (!recovered) return HttpResponse.json({ status: 503 }, { status: 503 })
+        return new URL(request.url).searchParams.get('after-id') === null
+          ? HttpResponse.json(bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b05'], true, 5))
+          : HttpResponse.json(bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b06'], false, 6))
+      },
+      true,
+    )
+    renderApp(`/auctions/${AUCTION_ID}`)
+
+    await bid('160')
+    expect(await screen.findByText(/couldn’t update the bid history/i)).toBeInTheDocument()
+    recovered = true
+    await userEvent.click(screen.getByRole('button', { name: /load more bids/i }))
+
+    expect(await screen.findByText(/bidder-5/)).toBeInTheDocument()
+    expect(screen.queryByText(/couldn’t update the bid history/i)).not.toBeInTheDocument()
   })
 })

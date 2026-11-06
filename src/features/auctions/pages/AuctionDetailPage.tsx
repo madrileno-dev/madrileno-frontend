@@ -128,6 +128,8 @@ function BidHistory({ auctionId }: { auctionId: string }) {
     isPending,
     isError,
     isLoadingError,
+    isRefetchError,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -164,7 +166,7 @@ function BidHistory({ auctionId }: { auctionId: string }) {
           variant="outline"
           size="sm"
           className="self-start"
-          onClick={() => void fetchNextPage()}
+          onClick={() => void (isRefetchError ? refetch() : fetchNextPage())}
           disabled={isFetchingNextPage}
         >
           {isFetchingNextPage ? t('bidLoadingMore') : t('bidLoadMore')}

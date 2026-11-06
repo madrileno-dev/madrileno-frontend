@@ -71,12 +71,15 @@ the API: they drift from the backend without a compile error.
      until the refetch finished, holding back the rejection message
    - when that refetch fails, the query keeps its old data: keep showing it
      and say it may be out of date, as `AuctionsPage` does for the list and
-     `AuctionDetailPage` for the auction and its bid history. Show "couldn't load" only on
-     `isLoadingError`; `isError` is also true while old data is on screen.
-     For the note, a single query checks `isRefetchError`. An infinite list,
-     after returning early on `isLoadingError`, checks `isError`: a failed
-     "load more" sets `isFetchNextPageError` and leaves `isRefetchError`
-     false, so checking `isRefetchError` would say nothing. With
+     `AuctionDetailPage` for the auction and its bid history. Show "couldn't
+     load" only on `isLoadingError`; `isError` is also true while old data is
+     on screen. For the note, a single query checks `isRefetchError`. An
+     infinite list, after returning early on `isLoadingError`, checks
+     `isError`: a failed "load more" sets `isFetchNextPageError` and leaves
+     `isRefetchError` false, so checking `isRefetchError` would say nothing.
+     A later successful "load more" clears `isError` but only appends a
+     page, so while `isRefetchError` is set make "load more" call `refetch()`
+     instead of `fetchNextPage()`, as the bid history does. With
      `keepPreviousData`, the previous page shows only while the next one
      loads: if that fails, `data` is gone and `isLoadingError` is true, so
      keep a way back, as `AuctionsPage` does with "← Previous"
