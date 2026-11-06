@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
+import net from 'node:net'
 import { afterEach, describe, it } from 'node:test'
 import express from 'express'
 import { createLogger, gracefulShutdown, requestLog } from '../../server-runtime.js'
@@ -105,6 +106,33 @@ describe('gracefulShutdown', () => {
     assert.equal(await (await inFlight).text(), 'done')
     await eventually(() => assert.deepEqual(exits, [0]))
     assert.match(out.lines[0], /SIGTERM/)
+  })
+
+  it('answers a request that arrives on an open connection during the drain, with Connection: close', async () => {
+    const app = express()
+    app.get('/ping', (_req, res) => res.send('pong'))
+    const { server } = await listen(app)
+    const exits = []
+    const drain = gracefulShutdown(server, {
+      log: createLogger({ write: () => {} }),
+      timeoutMs: 5000,
+      exit: (code) => exits.push(code),
+    })
+
+    const socket = net.connect(server.address().port)
+    await once(socket, 'connect')
+    socket.write('GET /ping HTTP/1.1\r\nHost: localhost\r\n')
+    await eventually(() => assert.ok(server.listening))
+    drain('SIGTERM')
+    socket.write('\r\n')
+    let response = ''
+    socket.on('data', (chunk) => (response += String(chunk)))
+    await once(socket, 'close')
+
+    assert.match(response, /^HTTP\/1\.1 200/)
+    assert.match(response, /connection: close/i)
+    assert.match(response, /pong$/)
+    await eventually(() => assert.deepEqual(exits, [0]))
   })
 
   it('closes connections still open after the timeout and exits 1', async () => {

@@ -76,7 +76,7 @@ export function requestLog(log) {
 export function gracefulShutdown(server, { log, timeoutMs, exit = (code) => process.exit(code) }) {
   let draining = false
   // A keep-alive connection outlives its response; close each one as it falls idle so close() can complete.
-  server.on('request', (_req, res) => {
+  server.prependListener('request', (_req, res) => {
     if (draining) res.setHeader('Connection', 'close')
     res.on('finish', () => {
       if (draining) setImmediate(() => server.closeIdleConnections())

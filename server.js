@@ -7,6 +7,11 @@ import { createLogger, gracefulShutdown, requestLog } from './server-runtime.js'
 const isProduction = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 5173)
 const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 25000)
+if (!Number.isInteger(shutdownTimeoutMs) || shutdownTimeoutMs < 0) {
+  throw new Error(
+    `SHUTDOWN_TIMEOUT_MS must be a whole number of milliseconds, got '${process.env.SHUTDOWN_TIMEOUT_MS}'`,
+  )
+}
 const log = createLogger({ format: process.env.LOG_FORMAT })
 
 // CSP for production HTML: inline scripts run only via the per-request nonce (no 'unsafe-inline').
@@ -33,7 +38,6 @@ const ABORT_DELAY = 10000
 
 const app = express()
 app.disable('x-powered-by')
-let draining = false
 
 /** @type {import('vite').ViteDevServer | undefined} */
 let vite
@@ -92,10 +96,8 @@ if (!isProduction) {
 
 const templateHtml = isProduction ? await fs.readFile('./dist/client/index.html', 'utf-8') : ''
 
-// 503 while draining tells a load balancer still holding a keep-alive connection to stop sending.
 app.get('/healthz', (_req, res) => {
-  if (draining) res.status(503).json({ status: 'draining' })
-  else res.json({ status: 'ok' })
+  res.json({ status: 'ok' })
 })
 
 app.use('*all', async (req, res) => {
@@ -179,8 +181,5 @@ const server = app.listen(port, () => {
 })
 const drain = gracefulShutdown(server, { log, timeoutMs: shutdownTimeoutMs })
 for (const signal of ['SIGTERM', 'SIGINT']) {
-  process.once(signal, () => {
-    draining = true
-    drain(signal)
-  })
+  process.once(signal, () => drain(signal))
 }

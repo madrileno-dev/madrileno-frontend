@@ -92,8 +92,9 @@ Design notes:
   origin at build time and add that frontend origin to the backend's
   `CORS_ALLOWED_ORIGINS`.
 - **SSR**: `docker build .` (multi-stage, healthcheck on `/healthz`), run with
-  `PORT` and `API_BASE_URL`. On SIGTERM the server stops taking connections,
-  answers `/healthz` with 503, lets requests in flight finish and exits 0;
+  `PORT` and `API_BASE_URL`. On SIGTERM the server stops taking connections at
+  once (on Kubernetes, give the pod a `preStop` sleep of a few seconds so it
+  leaves the Service endpoints first), lets requests in flight finish and exits 0;
   whatever is still open after `SHUTDOWN_TIMEOUT_MS` (default 25000, under
   Kubernetes' 30 s grace period) is cut off and it exits 1. When you stop the
   whole stack, stop this server first and the API after it has exited, and give
