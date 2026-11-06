@@ -49,10 +49,11 @@ the API: they drift from the backend without a compile error.
      const queryClient = useQueryClient()
      return useMutation(
        orpc.v1.loans.byLoanId.return.post.mutationOptions({
-         onSettled: () =>
-           queryClient.invalidateQueries({
+         onSettled: () => {
+           void queryClient.invalidateQueries({
              queryKey: orpc.v1.loans.byLoanId.get.key({ input: { params: { loanId } } }),
-           }),
+           })
+         },
        }),
      )
    }
@@ -65,10 +66,12 @@ the API: they drift from the backend without a compile error.
    - refresh what a mutation touched in `onSettled`, not `onSuccess`: a
      rejection such as "already returned" usually means the screen was stale,
      and only a refetch shows the user the current state. Reset the form on
-     success only, so a rejected attempt keeps what the user typed
+     success only, so a rejected attempt keeps what the user typed. Don't
+     return the `invalidateQueries` promise: the mutation would stay pending
+     until the refetch finished, holding back the rejection message
    - when that refetch fails, the query keeps its old data: keep showing it
-     and say it may be out of date, as `AuctionDetailPage` does for the
-     auction and its bid history. Show "couldn't load" only on
+     and say it may be out of date, as `AuctionsPage` does for the list and
+     `AuctionDetailPage` for the auction and its bid history. Show "couldn't load" only on
      `isLoadingError`; `isError` is also true while old data is on screen.
      For the note, a single query checks `isRefetchError`. An infinite list
      checks `isError`: a failed "load more" sets `isFetchNextPageError` and

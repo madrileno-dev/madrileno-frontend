@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -49,6 +49,30 @@ describe('auctions list', () => {
     expect(await screen.findByText(/no auctions yet/i)).toBeInTheDocument()
     expect(screen.queryByText(/of 0/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps the list on screen and says it may be out of date when a refresh fails', async () => {
+    let up = true
+    server.use(
+      http.get('*/v1/auctions', () =>
+        up
+          ? HttpResponse.json(auctionsPageFixture)
+          : HttpResponse.json({ status: 503 }, { status: 503 }),
+      ),
+    )
+    renderApp('/')
+    expect(await screen.findByText(/Château Margaux 2015/)).toBeInTheDocument()
+
+    up = false
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+
+    expect(await screen.findByText(/couldn’t refresh the auctions/i)).toBeInTheDocument()
+    expect(screen.getByText(/Château Margaux 2015/)).toBeInTheDocument()
+    expect(screen.queryByText(/couldn’t load auctions/i)).not.toBeInTheDocument()
+    focusManager.setFocused(undefined)
   })
 })
 
