@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Build the SSR image and verify the container: /healthz, SSR HTML, HEALTHCHECK.
+// Build the SSR image and verify the container: /healthz, SSR HTML, HEALTHCHECK, JSON request
+// logs and a clean exit on SIGTERM.
 // Backend-independent: SSR renders the shell even when the API is unreachable
 // (prefetch failures are swallowed), so this checks the container / SSR / hydration
 // wiring without a running backend. Usage: pnpm run smoke:docker
@@ -24,7 +25,7 @@ sh(`docker build -t ${IMAGE} .`)
 spawnSync('docker', ['rm', '-f', NAME], { stdio: 'ignore' })
 console.log('== run container ==')
 sh(
-  `docker run -d --name ${NAME} --network=host -e PORT=${String(PORT)} -e API_BASE_URL=http://localhost:9000 ${IMAGE}`,
+  `docker run -d --name ${NAME} --network=host -e PORT=${String(PORT)} -e LOG_FORMAT=json -e API_BASE_URL=http://localhost:9000 ${IMAGE}`,
 )
 
 const started = Date.now()
@@ -57,6 +58,19 @@ while (Date.now() - started < 90_000) {
 }
 if (containerHealth !== 'healthy') fail(`container HEALTHCHECK is '${containerHealth}'`)
 console.log('container HEALTHCHECK healthy')
+
+const logs = out(`docker logs ${NAME}`)
+if (!logs.split('\n').some((line) => line.startsWith('{') && line.includes('"url.path":"/"')))
+  fail('no JSON request log line for GET /')
+console.log('JSON request log OK')
+
+const stopStarted = Date.now()
+sh(`docker stop --time 20 ${NAME}`, { stdio: 'ignore' })
+const stopSeconds = (Date.now() - stopStarted) / 1000
+const exitCode = out(`docker inspect --format '{{.State.ExitCode}}' ${NAME}`)
+if (exitCode !== '0') fail(`container exited ${exitCode} on SIGTERM instead of 0`)
+if (stopSeconds > 5) fail(`SIGTERM took ${stopSeconds.toFixed(1)}s to stop the container`)
+console.log(`SIGTERM: exited 0 in ${stopSeconds.toFixed(1)}s`)
 
 sh(`docker rm -f ${NAME}`, { stdio: 'ignore' })
 console.log('\nDocker smoke: PASS')

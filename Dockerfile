@@ -15,7 +15,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 COPY --from=build /app/dist ./dist
-COPY server.js ./
+COPY server.js server-runtime.js ./
 EXPOSE 5173
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
   CMD wget -qO- "http://localhost:${PORT:-5173}/healthz" || exit 1

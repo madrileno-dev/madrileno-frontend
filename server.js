@@ -2,9 +2,12 @@ import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 import { Transform } from 'node:stream'
 import express from 'express'
+import { createLogger, gracefulShutdown, requestLog } from './server-runtime.js'
 
 const isProduction = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 5173)
+const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 25000)
+const log = createLogger({ format: process.env.LOG_FORMAT })
 
 // CSP for production HTML: inline scripts run only via the per-request nonce (no 'unsafe-inline').
 // If you enable OpenObserve RUM, add its host to `connect-src`.
@@ -30,6 +33,7 @@ const ABORT_DELAY = 10000
 
 const app = express()
 app.disable('x-powered-by')
+let draining = false
 
 /** @type {import('vite').ViteDevServer | undefined} */
 let vite
@@ -37,7 +41,9 @@ if (!isProduction) {
   const { createServer } = await import('vite')
   vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
   app.use(vite.middlewares)
+  app.use(requestLog(log))
 } else {
+  app.use(requestLog(log))
   const compression = (await import('compression')).default
   const sirv = (await import('sirv')).default
   app.use(compression())
@@ -78,7 +84,7 @@ if (!isProduction) {
       if (upstream.body) Readable.fromWeb(upstream.body).pipe(res)
       else res.end()
     } catch (e) {
-      console.error('API forward failed:', e)
+      log.error('API forward failed', e)
       res.status(502).json({ type: 'about:blank', status: 502, title: 'Upstream unavailable' })
     }
   })
@@ -86,8 +92,10 @@ if (!isProduction) {
 
 const templateHtml = isProduction ? await fs.readFile('./dist/client/index.html', 'utf-8') : ''
 
+// 503 while draining tells a load balancer still holding a keep-alive connection to stop sending.
 app.get('/healthz', (_req, res) => {
-  res.json({ status: 'ok' })
+  if (draining) res.status(503).json({ status: 'draining' })
+  else res.json({ status: 'ok' })
 })
 
 app.use('*all', async (req, res) => {
@@ -158,7 +166,7 @@ app.use('*all', async (req, res) => {
     pipe(transformStream)
   } catch (e) {
     if (e instanceof Error) vite?.ssrFixStacktrace(e)
-    console.error(e)
+    log.error('SSR render failed', e)
     res.status(500)
     // Stack traces reveal server internals — never send them to production visitors.
     if (isProduction) res.end('Internal Server Error')
@@ -166,6 +174,13 @@ app.use('*all', async (req, res) => {
   }
 })
 
-app.listen(port, () => {
-  console.log(`SSR server started at http://localhost:${port} (api: ${apiBaseUrl})`)
+const server = app.listen(port, () => {
+  log.info(`SSR server started at http://localhost:${port} (api: ${apiBaseUrl})`)
 })
+const drain = gracefulShutdown(server, { log, timeoutMs: shutdownTimeoutMs })
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.once(signal, () => {
+    draining = true
+    drain(signal)
+  })
+}
