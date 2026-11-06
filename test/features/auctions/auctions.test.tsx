@@ -214,7 +214,7 @@ describe('auction detail', () => {
 
     expect(await screen.findByText(/couldn’t refresh this auction/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /Château Margaux/ })).toBeInTheDocument()
-    expect(screen.getByText('€150.00')).toBeInTheDocument()
+    expect(screen.getByText('€150.00', { selector: 'strong.text-lg' })).toBeInTheDocument()
     expect(screen.getByLabelText(/your bid/i)).toHaveValue(160)
   })
 
