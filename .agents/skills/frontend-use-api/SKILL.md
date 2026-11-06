@@ -68,8 +68,10 @@ the API: they drift from the backend without a compile error.
      success only, so a rejected attempt keeps what the user typed
    - when that refetch fails, the query keeps its old data with
      `isRefetchError` set: keep showing it and say it may be out of date, as
-     `AuctionDetailPage` does. Check `isLoadingError` for "couldn't load at
-     all", not `isError`, which would also hide the cached data
+     `AuctionDetailPage` does for the auction and its bid history. Check
+     `isLoadingError` for "couldn't load at all", not `isError`, which would
+     also hide the cached data. In an infinite list a failed "load more" sets
+     `isError` too, with the pages already loaded kept
    - a list item type is the page type indexed: `LoansPage['items'][number]`
    - a one-off call that is not a query or a mutation, like login's, uses
      `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`

@@ -123,12 +123,19 @@ function PlaceBidForm({ auction }: { auction: Auction }) {
 
 function BidHistory({ auctionId }: { auctionId: string }) {
   const t = useTranslations('auction')
-  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useBids(auctionId)
+  const {
+    data,
+    isPending,
+    isError,
+    isLoadingError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useBids(auctionId)
   const formatInstant = useInstantFormatter()
   const price = usePriceFormatter()
   if (isPending) return <p className="text-muted-foreground">{t('bidLoading')}</p>
-  if (isError) return <p className="text-destructive">{t('bidError')}</p>
+  if (isLoadingError) return <p className="text-destructive">{t('bidError')}</p>
   const bids = data.pages.flatMap((page) => page.items)
   return (
     <div className="flex flex-col gap-3">
@@ -146,6 +153,11 @@ function BidHistory({ auctionId }: { auctionId: string }) {
             </li>
           ))}
         </ul>
+      )}
+      {isError && (
+        <p role="status" className="text-sm text-destructive">
+          {t('bidStale')}
+        </p>
       )}
       {hasNextPage && (
         <Button

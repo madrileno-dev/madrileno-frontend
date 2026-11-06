@@ -74,6 +74,24 @@ describe('auction detail', () => {
     expect(screen.queryByRole('button', { name: /load more bids/i })).not.toBeInTheDocument()
   })
 
+  it('keeps the bids already shown when loading more fails', async () => {
+    server.use(
+      detailHandler,
+      http.get(`*/v1/auctions/${AUCTION_ID}/bids`, ({ request }) =>
+        new URL(request.url).searchParams.get('after-id') === null
+          ? HttpResponse.json(bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b01'], true))
+          : HttpResponse.json({ status: 503 }, { status: 503 }),
+      ),
+    )
+    renderApp(`/auctions/${AUCTION_ID}`)
+
+    expect(await screen.findByText(/bidder-0/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /load more bids/i }))
+
+    expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument()
+    expect(screen.getByText(/bidder-0/)).toBeInTheDocument()
+  })
+
   it('shows the typed rejection when a bid is too low', async () => {
     tokenStore.set({ jwt: 'jwt', refreshToken: AUCTION_ID, email: 'bidder@example.com' })
     server.use(
@@ -97,7 +115,10 @@ describe('auction detail', () => {
     ).toBeInTheDocument()
   })
 
-  function rejectedBidAfter(detailAfterBid: () => Response) {
+  function rejectedBidAfter(
+    detailAfterBid: () => Response,
+    bidsAfterBid: () => Response = () => HttpResponse.json(bidsPageFixture([], false)),
+  ) {
     let bidPlaced = false
     tokenStore.set({ jwt: 'jwt', refreshToken: AUCTION_ID, email: 'bidder@example.com' })
     server.use(
@@ -105,7 +126,7 @@ describe('auction detail', () => {
         bidPlaced ? detailAfterBid() : HttpResponse.json(auctionFixture),
       ),
       http.get(`*/v1/auctions/${AUCTION_ID}/bids`, () =>
-        HttpResponse.json(bidsPageFixture([], false)),
+        bidPlaced ? bidsAfterBid() : HttpResponse.json(bidsPageFixture([], false)),
       ),
       http.post(`*/v1/auctions/${AUCTION_ID}/bids`, () => {
         bidPlaced = true
@@ -142,5 +163,19 @@ describe('auction detail', () => {
     expect(screen.getByRole('heading', { level: 1, name: /Château Margaux/ })).toBeInTheDocument()
     expect(screen.getByText('€150.00')).toBeInTheDocument()
     expect(screen.getByLabelText(/your bid/i)).toHaveValue(160)
+  })
+
+  it('keeps the bid history on screen when its refresh after a rejected bid fails', async () => {
+    rejectedBidAfter(
+      () => HttpResponse.json({ status: 503 }, { status: 503 }),
+      () => HttpResponse.json({ status: 503 }, { status: 503 }),
+    )
+    renderApp(`/auctions/${AUCTION_ID}`)
+
+    await bid('160')
+
+    expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument()
+    expect(screen.getByText(/no bids yet/i)).toBeInTheDocument()
+    expect(screen.queryByText(/couldn’t load the bid history/i)).not.toBeInTheDocument()
   })
 })
