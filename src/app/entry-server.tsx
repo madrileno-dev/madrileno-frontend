@@ -14,7 +14,11 @@ export interface RenderResult {
 }
 
 // Resolves on onShellReady, rejects on shell error — the caller can pipe immediately.
-export async function render(url: string, apiBaseUrl: string): Promise<RenderResult> {
+export async function render(
+  url: string,
+  apiBaseUrl: string,
+  onError: (error: unknown) => void,
+): Promise<RenderResult> {
   const queryClient = makeQueryClient()
   // Prefetchers are independent — pay for the slowest, not the sum.
   await Promise.all(ssrPrefetchers.map((prefetch) => prefetch(queryClient, url, apiBaseUrl)))
@@ -37,9 +41,7 @@ export async function render(url: string, apiBaseUrl: string): Promise<RenderRes
         onShellError(error) {
           reject(error instanceof Error ? error : new Error(String(error)))
         },
-        onError(error) {
-          console.error(error)
-        },
+        onError,
       },
     )
   })

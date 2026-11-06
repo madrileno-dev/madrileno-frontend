@@ -92,7 +92,21 @@ Design notes:
   origin at build time and add that frontend origin to the backend's
   `CORS_ALLOWED_ORIGINS`.
 - **SSR**: `docker build .` (multi-stage, healthcheck on `/healthz`), run with
-  `PORT` and `API_BASE_URL`. The production server forwards `/v1` to
+  `PORT` and `API_BASE_URL`. On SIGTERM the server stops taking connections at
+  once (on Kubernetes, give the pod a `preStop` sleep of a few seconds so it
+  leaves the Service endpoints first, and keep that sleep plus the drain under
+  `terminationGracePeriodSeconds`), lets requests in flight finish and exits 0;
+  whatever is still open after `SHUTDOWN_TIMEOUT_MS` (default 25000, under
+  Kubernetes' 30 s grace period) is cut off and it exits 1. When you stop the
+  whole stack, stop this server first and the API only after it has exited:
+  otherwise a write the API committed can lose its response on the way back.
+  Give each a stop timeout above its own drain, since Docker's default of 10 s
+  is shorter than both (`docker stop --time 30 frontend`, then
+  `docker stop --time 35 api` for the backend's 30 s `HTTP_SHUTDOWN_TIMEOUT`).
+  With Compose, `depends_on: [api]` on this service makes `docker compose stop`
+  and `down` stop it first; set `stop_grace_period` on both. It logs one line
+  per request (method, path without the query, status, duration) to stdout.
+  The production server forwards `/v1` to
   `API_BASE_URL` (same-origin for browsers, mirroring the dev proxy), so no
   CORS and no `VITE_API_BASE_URL` are needed unless you deliberately serve
   the API from a different origin.

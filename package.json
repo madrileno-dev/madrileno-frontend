@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run && node --test test/server/*.test.js",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "sync-contracts": "node scripts/sync-contracts.mjs",
