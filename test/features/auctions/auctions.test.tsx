@@ -10,6 +10,7 @@ import { LocaleProvider } from '@/i18n/LocaleProvider'
 import { server } from '../../mswServer'
 import {
   AUCTION_ID,
+  auctionFixture,
   auctionsPageFixture,
   bidsPageFixture,
   bidTooLowProblem,
@@ -94,5 +95,52 @@ describe('auction detail', () => {
     expect(
       await screen.findByText(/someone got there first. The minimum is now €300.00/i),
     ).toBeInTheDocument()
+  })
+
+  function rejectedBidAfter(detailAfterBid: () => Response) {
+    let bidPlaced = false
+    tokenStore.set({ jwt: 'jwt', refreshToken: AUCTION_ID, email: 'bidder@example.com' })
+    server.use(
+      http.get(`*/v1/auctions/${AUCTION_ID}`, () =>
+        bidPlaced ? detailAfterBid() : HttpResponse.json(auctionFixture),
+      ),
+      http.get(`*/v1/auctions/${AUCTION_ID}/bids`, () =>
+        HttpResponse.json(bidsPageFixture([], false)),
+      ),
+      http.post(`*/v1/auctions/${AUCTION_ID}/bids`, () => {
+        bidPlaced = true
+        return HttpResponse.json(bidTooLowProblem, { status: 409 })
+      }),
+    )
+  }
+
+  async function bid(amount: string) {
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Château Margaux/ }),
+    ).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/your bid/i), amount)
+    await userEvent.click(screen.getByRole('button', { name: /place bid/i }))
+  }
+
+  it('refreshes the auction after a rejected bid and keeps the entered amount', async () => {
+    rejectedBidAfter(() => HttpResponse.json({ ...auctionFixture, currentPrice: 280 }))
+    renderApp(`/auctions/${AUCTION_ID}`)
+
+    await bid('160')
+
+    expect(await screen.findByText('€280.00')).toBeInTheDocument()
+    expect(screen.getByLabelText(/your bid/i)).toHaveValue(160)
+  })
+
+  it('keeps the auction on screen and says it may be out of date when that refresh fails', async () => {
+    rejectedBidAfter(() => HttpResponse.json({ status: 503 }, { status: 503 }))
+    renderApp(`/auctions/${AUCTION_ID}`)
+
+    await bid('160')
+
+    expect(await screen.findByText(/couldn’t refresh this auction/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /Château Margaux/ })).toBeInTheDocument()
+    expect(screen.getByText('€150.00')).toBeInTheDocument()
+    expect(screen.getByLabelText(/your bid/i)).toHaveValue(160)
   })
 })

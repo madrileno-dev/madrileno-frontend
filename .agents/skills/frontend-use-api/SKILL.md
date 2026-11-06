@@ -49,7 +49,7 @@ the API: they drift from the backend without a compile error.
      const queryClient = useQueryClient()
      return useMutation(
        orpc.v1.loans.byLoanId.return.post.mutationOptions({
-         onSuccess: () =>
+         onSettled: () =>
            queryClient.invalidateQueries({
              queryKey: orpc.v1.loans.byLoanId.get.key({ input: { params: { loanId } } }),
            }),
@@ -62,6 +62,14 @@ the API: they drift from the backend without a compile error.
 
    - a mutation takes the whole input when called:
      `returnLoan.mutate({ params: { loanId } })`
+   - refresh what a mutation touched in `onSettled`, not `onSuccess`: a
+     rejection such as "already returned" usually means the screen was stale,
+     and only a refetch shows the user the current state. Reset the form on
+     success only, so a rejected attempt keeps what the user typed
+   - when that refetch fails, the query keeps its old data with
+     `isRefetchError` set: keep showing it and say it may be out of date, as
+     `AuctionDetailPage` does. Check `isLoadingError` for "couldn't load at
+     all", not `isError`, which would also hide the cached data
    - a list item type is the page type indexed: `LoansPage['items'][number]`
    - a one-off call that is not a query or a mutation, like login's, uses
      `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`

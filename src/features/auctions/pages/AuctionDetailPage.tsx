@@ -173,13 +173,13 @@ export function AuctionDetailPage() {
 
 function AuctionDetail({ auctionId }: { auctionId: string }) {
   const t = useTranslations('auction')
-  const { data: auction, isPending, isError } = useAuction(auctionId)
+  const { data: auction, isPending, isLoadingError, isRefetchError } = useAuction(auctionId)
   const formatInstant = useInstantFormatter()
   const price = usePriceFormatter()
   const label = useAuctionLabels()
 
   if (isPending) return <p className="text-muted-foreground">{t('detailLoading')}</p>
-  if (isError) return <p className="text-destructive">{t('detailError')}</p>
+  if (isLoadingError) return <p className="text-destructive">{t('detailError')}</p>
 
   return (
     <section className="flex flex-col gap-4">
@@ -203,6 +203,11 @@ function AuctionDetail({ auctionId }: { auctionId: string }) {
         {auction.producerName} · {auction.bottleCount}× {label.bottleSize(auction.bottleSize)}
       </p>
       {auction.description != null && <p>{auction.description}</p>}
+      {isRefetchError && (
+        <p role="status" className="text-sm text-destructive">
+          {t('detailStale')}
+        </p>
+      )}
       <p>
         <strong className="text-lg">{price(auction.currentPrice, auction.currency)}</strong>
         <span className="text-sm text-muted-foreground">

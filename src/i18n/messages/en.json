@@ -72,6 +72,7 @@
     "startedAt": "started at {price}",
     "detailLoading": "Loading auction…",
     "detailError": "Couldn’t load this auction — does it exist?",
+    "detailStale": "Couldn’t refresh this auction, so what you see may be out of date.",
     "missingId": "Missing auction id.",
     "bidLoginSuffix": " to place a bid.",
     "bidAmountLabel": "Your bid ({currency})",
