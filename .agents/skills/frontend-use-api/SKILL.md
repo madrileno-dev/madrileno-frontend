@@ -66,12 +66,14 @@ the API: they drift from the backend without a compile error.
      rejection such as "already returned" usually means the screen was stale,
      and only a refetch shows the user the current state. Reset the form on
      success only, so a rejected attempt keeps what the user typed
-   - when that refetch fails, the query keeps its old data with
-     `isRefetchError` set: keep showing it and say it may be out of date, as
-     `AuctionDetailPage` does for the auction and its bid history. Check
-     `isLoadingError` for "couldn't load at all", not `isError`, which would
-     also hide the cached data. In an infinite list a failed "load more" sets
-     `isError` too, with the pages already loaded kept
+   - when that refetch fails, the query keeps its old data: keep showing it
+     and say it may be out of date, as `AuctionDetailPage` does for the
+     auction and its bid history. Show "couldn't load" only on
+     `isLoadingError`; `isError` is also true while old data is on screen.
+     For the note, a single query checks `isRefetchError`. An infinite list
+     checks `isError`: a failed "load more" sets `isFetchNextPageError` and
+     leaves `isRefetchError` false, so checking `isRefetchError` would say
+     nothing
    - a list item type is the page type indexed: `LoansPage['items'][number]`
    - a one-off call that is not a query or a mutation, like login's, uses
      `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`

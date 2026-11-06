@@ -126,7 +126,9 @@ describe('auction detail', () => {
         bidPlaced ? detailAfterBid() : HttpResponse.json(auctionFixture),
       ),
       http.get(`*/v1/auctions/${AUCTION_ID}/bids`, () =>
-        bidPlaced ? bidsAfterBid() : HttpResponse.json(bidsPageFixture([], false)),
+        bidPlaced
+          ? bidsAfterBid()
+          : HttpResponse.json(bidsPageFixture(['019ed9bb-0000-7000-8000-000000000b01'], false)),
       ),
       http.post(`*/v1/auctions/${AUCTION_ID}/bids`, () => {
         bidPlaced = true
@@ -175,7 +177,7 @@ describe('auction detail', () => {
     await bid('160')
 
     expect(await screen.findByText(/couldn’t update the bid history/i)).toBeInTheDocument()
-    expect(screen.getByText(/no bids yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/bidder-0/)).toBeInTheDocument()
     expect(screen.queryByText(/couldn’t load the bid history/i)).not.toBeInTheDocument()
   })
 })

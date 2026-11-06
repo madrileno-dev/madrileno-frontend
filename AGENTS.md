@@ -29,7 +29,8 @@ madrileno backend template (sibling repo `../madrileno`).
 - After a write, refresh the queries it touched whether it succeeded or failed
   (`onSettled`), and keep the user's input when it failed. If that refresh
   fails, keep the old data on screen and say it may be out of date
-  (`isRefetchError`); never claim it was refreshed.
+  (`isRefetchError`; `isError` in an infinite list, where a failed "load more"
+  doesn't set `isRefetchError`); never claim it was refreshed.
 
 # Structure
 
