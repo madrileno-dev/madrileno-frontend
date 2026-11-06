@@ -6,17 +6,14 @@ import { createLogger, gracefulShutdown, requestLog } from './server-runtime.js'
 
 const isProduction = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 5173)
-const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS || 25000)
-if (
-  !Number.isInteger(shutdownTimeoutMs) ||
-  shutdownTimeoutMs < 0 ||
-  shutdownTimeoutMs > 2147483647
-) {
+const shutdownTimeoutSetting = process.env.SHUTDOWN_TIMEOUT_MS || '25000'
+const shutdownTimeoutMs = Number(shutdownTimeoutSetting)
+if (!/^\d+$/.test(shutdownTimeoutSetting) || shutdownTimeoutMs > 2147483647) {
   throw new Error(
     `SHUTDOWN_TIMEOUT_MS must be a whole number of milliseconds, got '${process.env.SHUTDOWN_TIMEOUT_MS}'`,
   )
 }
-const log = createLogger({ format: process.env.LOG_FORMAT })
+const log = createLogger({ format: process.env.LOG_FORMAT || 'text' })
 
 // CSP for production HTML: inline scripts run only via the per-request nonce (no 'unsafe-inline').
 // If you enable OpenObserve RUM, add its host to `connect-src`.
@@ -128,7 +125,9 @@ app.use('*all', async (req, res) => {
       render = (await import('./dist/server/entry-server.js')).render
     }
 
-    const { pipe, abort, dehydratedState } = await render(url, apiBaseUrl)
+    const { pipe, abort, dehydratedState } = await render(url, apiBaseUrl, (error) =>
+      log.error('SSR render error', error),
+    )
 
     // Per-request nonce authorizes the inline scripts under the CSP (prod only — Vite HMR needs
     // inline/eval in dev).

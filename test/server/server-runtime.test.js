@@ -45,6 +45,13 @@ async function eventually(check, timeoutMs = 2000) {
 }
 
 describe('createLogger', () => {
+  it('refuses a format other than text or json', () => {
+    assert.throws(
+      () => createLogger({ format: 'ecs' }),
+      /LOG_FORMAT must be text or json, got 'ecs'/,
+    )
+  })
+
   it("keeps an error's cause, where fetch puts the reason it failed", () => {
     const failed = new TypeError('fetch failed', {
       cause: new Error('connect ECONNREFUSED 127.0.0.1:9000'),
@@ -173,16 +180,20 @@ describe('gracefulShutdown', () => {
     await eventually(() => assert.deepEqual(exits, [0]))
   })
 
-  it('closes connections still open after the timeout and exits 1', async () => {
+  it('closes connections still open after the timeout, logs them as cut off, then exits 1', async () => {
+    const out = collect()
+    const log = createLogger({ write: out.write })
     const entered = signal()
     const app = express()
+    app.use(requestLog(log))
     app.get('/hang', () => entered.resolve())
     const { server, url } = await listen(app)
     const exits = []
     const drain = gracefulShutdown(server, {
-      log: createLogger({ write: () => {} }),
+      log,
       timeoutMs: 200,
-      exit: (code) => exits.push(code),
+      exit: (code) =>
+        exits.push({ code, cutOff: out.lines.filter((line) => line.includes('GET /hang')) }),
     })
 
     const hanging = fetch(`${url}/hang`).catch((e) => e)
@@ -190,6 +201,8 @@ describe('gracefulShutdown', () => {
     drain('SIGTERM')
 
     assert.ok((await hanging) instanceof Error)
-    await eventually(() => assert.deepEqual(exits, [1]))
+    await eventually(() => assert.equal(exits.length, 1))
+    assert.equal(exits[0].code, 1)
+    assert.match(exits[0].cutOff.join('\n'), /cut off before the response finished/)
   })
 })
