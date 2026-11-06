@@ -2,46 +2,19 @@
 
 import { inspect } from 'node:util'
 
-const traceparent = /^[\da-f]{2}-([\da-f]{32})-[\da-f]{16}-[\da-f]{2}$/
-
 /**
- * One line per entry: `LEVEL message` by default, ECS JSON with `format: 'json'`.
- * @param {{ format?: string, write?: (line: string) => void }} [options]
+ * One `LEVEL message` line per entry, followed by the error and its cause when there is one.
+ * @param {{ write?: (line: string) => void }} [options]
  */
-export function createLogger({
-  format = 'text',
-  write = (line) => process.stdout.write(`${line}\n`),
-} = {}) {
-  if (format !== 'text' && format !== 'json') {
-    throw new Error(`LOG_FORMAT must be text or json, got '${format}'`)
-  }
-  /** @param {'info' | 'error'} level @param {string} message @param {Record<string, unknown>} fields @param {unknown} [error] */
-  const entry = (level, message, fields, error) => {
-    if (format === 'json') {
-      const errorFields =
-        error instanceof Error
-          ? { 'error.message': error.message, 'error.stack_trace': inspect(error) }
-          : {}
-      write(
-        JSON.stringify({
-          '@timestamp': new Date().toISOString(),
-          'log.level': level.toUpperCase(),
-          message,
-          ...fields,
-          ...errorFields,
-        }),
-      )
-    } else {
-      write(
-        `${level.toUpperCase()} ${message}${error instanceof Error ? `\n${inspect(error)}` : ''}`,
-      )
-    }
-  }
+export function createLogger({ write = (line) => process.stdout.write(`${line}\n`) } = {}) {
+  /** @param {'info' | 'error'} level @param {string} message @param {unknown} [error] */
+  const entry = (level, message, error) =>
+    write(`${level.toUpperCase()} ${message}${error instanceof Error ? `\n${inspect(error)}` : ''}`)
   return {
-    /** @param {string} message @param {Record<string, unknown>} [fields] */
-    info: (message, fields = {}) => entry('info', message, fields),
-    /** @param {string} message @param {unknown} [error] @param {Record<string, unknown>} [fields] */
-    error: (message, error, fields = {}) => entry('error', message, fields, error),
+    /** @param {string} message */
+    info: (message) => entry('info', message),
+    /** @param {string} message @param {unknown} [error] */
+    error: (message, error) => entry('error', message, error),
   }
 }
 
@@ -58,16 +31,8 @@ export function requestLog(log) {
     res.on('close', () => {
       const nanos = process.hrtime.bigint() - started
       const millis = Math.round(Number(nanos) / 1e5) / 10
-      const traceId = traceparent.exec(req.get('traceparent') ?? '')?.[1]
       const cutOff = res.writableFinished ? '' : ', cut off before the response finished'
-      log.info(`${req.method} ${path} ${String(res.statusCode)} ${String(millis)} ms${cutOff}`, {
-        'http.request.method': req.method,
-        'url.path': path,
-        'http.response.status_code': res.statusCode,
-        'event.duration': Number(nanos),
-        ...(res.writableFinished ? {} : { 'event.outcome': 'failure' }),
-        ...(traceId ? { trace_id: traceId } : {}),
-      })
+      log.info(`${req.method} ${path} ${String(res.statusCode)} ${String(millis)} ms${cutOff}`)
     })
     next()
   }

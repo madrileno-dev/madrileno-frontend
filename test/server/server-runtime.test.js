@@ -45,53 +45,32 @@ async function eventually(check, timeoutMs = 2000) {
 }
 
 describe('createLogger', () => {
-  it('refuses a format other than text or json', () => {
-    assert.throws(
-      () => createLogger({ format: 'ecs' }),
-      /LOG_FORMAT must be text or json, got 'ecs'/,
-    )
-  })
-
   it("keeps an error's cause, where fetch puts the reason it failed", () => {
     const failed = new TypeError('fetch failed', {
       cause: new Error('connect ECONNREFUSED 127.0.0.1:9000'),
     })
-    const json = collect()
-    createLogger({ format: 'json', write: json.write }).error('API forward failed', failed)
-    const text = collect()
-    createLogger({ write: text.write }).error('API forward failed', failed)
+    const out = collect()
+    createLogger({ write: out.write }).error('API forward failed', failed)
 
-    const entry = JSON.parse(json.lines[0])
-    assert.equal(entry['log.level'], 'ERROR')
-    assert.match(entry['error.stack_trace'], /ECONNREFUSED/)
-    assert.match(text.lines[0], /^ERROR API forward failed\n[\s\S]*ECONNREFUSED/)
+    assert.match(out.lines[0], /^ERROR API forward failed\n[\s\S]*ECONNREFUSED/)
   })
 })
 
 describe('requestLog', () => {
-  it('writes one JSON line per request with method, path, status, duration and trace id', async () => {
+  it('writes one line per request with method, path without the query, status and duration', async () => {
     const out = collect()
     const app = express()
-    app.use(requestLog(createLogger({ format: 'json', write: out.write })))
+    app.use(requestLog(createLogger({ write: out.write })))
     app.get('/auctions', (_req, res) => res.status(201).send('ok'))
     const { url } = await listen(app)
 
-    await fetch(`${url}/auctions?q=secret`, {
-      headers: { traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' },
-    })
+    await fetch(`${url}/auctions?q=secret`)
     await eventually(() => assert.equal(out.lines.length, 1))
 
-    const entry = JSON.parse(out.lines[0])
-    assert.equal(entry['log.level'], 'INFO')
-    assert.equal(entry['http.request.method'], 'GET')
-    assert.equal(entry['url.path'], '/auctions')
-    assert.equal(entry['http.response.status_code'], 201)
-    assert.equal(entry.trace_id, '4bf92f3577b34da6a3ce929d0e0e4736')
-    assert.equal(typeof entry['event.duration'], 'number')
-    assert.ok(!out.lines[0].includes('secret'))
+    assert.match(out.lines[0], /^INFO GET \/auctions 201 \d+(\.\d+)? ms$/)
   })
 
-  it('says in the plain line that a request was cut off before its response', async () => {
+  it('says when a request was cut off before its response', async () => {
     const out = collect()
     const entered = signal()
     const app = express()
@@ -112,7 +91,7 @@ describe('requestLog', () => {
     )
   })
 
-  it('writes a plain line by default and leaves /healthz out', async () => {
+  it('leaves /healthz out', async () => {
     const out = collect()
     const app = express()
     app.use(requestLog(createLogger({ write: out.write })))

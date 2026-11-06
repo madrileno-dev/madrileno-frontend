@@ -13,7 +13,7 @@ if (!/^\d+$/.test(shutdownTimeoutSetting) || shutdownTimeoutMs > 2147483647) {
     `SHUTDOWN_TIMEOUT_MS must be a whole number of milliseconds, got '${process.env.SHUTDOWN_TIMEOUT_MS}'`,
   )
 }
-const log = createLogger({ format: process.env.LOG_FORMAT || 'text' })
+const log = createLogger()
 
 // CSP for production HTML: inline scripts run only via the per-request nonce (no 'unsafe-inline').
 // If you enable OpenObserve RUM, add its host to `connect-src`.

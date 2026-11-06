@@ -105,10 +105,8 @@ Design notes:
   `docker stop --time 35 api` for the backend's 30 s `HTTP_SHUTDOWN_TIMEOUT`).
   With Compose, `depends_on: [api]` on this service makes `docker compose stop`
   and `down` stop it first; set `stop_grace_period` on both. It logs one line
-  per request (method, path without the query, status,
-  duration); set
-  `LOG_FORMAT=json` for ECS JSON lines with `trace_id` from `traceparent`, the
-  same field names as the backend's `LOG_FORMAT=json`. The production server forwards `/v1` to
+  per request (method, path without the query, status, duration) to stdout.
+  The production server forwards `/v1` to
   `API_BASE_URL` (same-origin for browsers, mirroring the dev proxy), so no
   CORS and no `VITE_API_BASE_URL` are needed unless you deliberately serve
   the API from a different origin.
