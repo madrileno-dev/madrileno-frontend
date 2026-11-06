@@ -95,8 +95,13 @@ Design notes:
   `PORT` and `API_BASE_URL`. On SIGTERM the server stops taking connections,
   answers `/healthz` with 503, lets requests in flight finish and exits 0;
   whatever is still open after `SHUTDOWN_TIMEOUT_MS` (default 25000, under
-  Kubernetes' 30 s grace period) is cut off and it exits 1. It logs one line per
-  request (method, path without the query, status, duration); set
+  Kubernetes' 30 s grace period) is cut off and it exits 1. When you stop the
+  whole stack, stop this server first and the API after it has exited, and give
+  each a stop timeout above its drain (Docker's default is 10 s): otherwise a
+  write the API committed can lose its response on the way back ([backend
+  deployment doc](https://github.com/madrileno-dev/madrileno/blob/main/docs/deployment.md#stopping-it-together-with-the-frontend)).
+  It logs one line per request (method, path without the query, status,
+  duration); set
   `LOG_FORMAT=json` for ECS JSON lines with `trace_id` from `traceparent`, the
   same field names as the backend's `LOG_FORMAT=json`. The production server forwards `/v1` to
   `API_BASE_URL` (same-origin for browsers, mirroring the dev proxy), so no
