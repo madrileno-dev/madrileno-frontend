@@ -97,11 +97,14 @@ Design notes:
   leaves the Service endpoints first), lets requests in flight finish and exits 0;
   whatever is still open after `SHUTDOWN_TIMEOUT_MS` (default 25000, under
   Kubernetes' 30 s grace period) is cut off and it exits 1. When you stop the
-  whole stack, stop this server first and the API after it has exited, and give
-  each a stop timeout above its drain (Docker's default is 10 s): otherwise a
-  write the API committed can lose its response on the way back ([backend
-  deployment doc](https://github.com/madrileno-dev/madrileno/blob/main/docs/deployment.md#stopping-it-together-with-the-frontend)).
-  It logs one line per request (method, path without the query, status,
+  whole stack, stop this server first and the API only after it has exited:
+  otherwise a write the API committed can lose its response on the way back.
+  Give each a stop timeout above its own drain, since Docker's default of 10 s
+  is shorter than both (`docker stop --time 30 frontend`, then
+  `docker stop --time 35 api` for the backend's 30 s `HTTP_SHUTDOWN_TIMEOUT`).
+  With Compose, `depends_on: [api]` on this service makes `docker compose stop`
+  and `down` stop it first; set `stop_grace_period` on both. It logs one line
+  per request (method, path without the query, status,
   duration); set
   `LOG_FORMAT=json` for ECS JSON lines with `trace_id` from `traceparent`, the
   same field names as the backend's `LOG_FORMAT=json`. The production server forwards `/v1` to
