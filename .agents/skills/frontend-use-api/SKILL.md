@@ -49,10 +49,11 @@ the API: they drift from the backend without a compile error.
      const queryClient = useQueryClient()
      return useMutation(
        orpc.v1.loans.byLoanId.return.post.mutationOptions({
-         onSuccess: () =>
-           queryClient.invalidateQueries({
+         onSettled: () => {
+           void queryClient.invalidateQueries({
              queryKey: orpc.v1.loans.byLoanId.get.key({ input: { params: { loanId } } }),
-           }),
+           })
+         },
        }),
      )
    }
@@ -62,6 +63,26 @@ the API: they drift from the backend without a compile error.
 
    - a mutation takes the whole input when called:
      `returnLoan.mutate({ params: { loanId } })`
+   - refresh what a mutation touched in `onSettled`, not `onSuccess`: a
+     rejection such as "already returned" usually means the screen was stale,
+     and only a refetch shows the user the current state. Reset the form on
+     success only, so a rejected attempt keeps what the user typed. Don't
+     return the `invalidateQueries` promise: the mutation would stay pending
+     until the refetch finished, holding back the rejection message
+   - when that refetch fails, the query keeps its old data: keep showing it
+     and say it may be out of date, as `AuctionsPage` does for the list and
+     `AuctionDetailPage` for the auction and its bid history. Show "couldn't
+     load" only on `isLoadingError`; `isError` is also true while old data is
+     on screen. For the note, a single query checks `isRefetchError`. An
+     infinite list, after returning early on `isLoadingError`, checks
+     `isError`: a failed "load more" sets `isFetchNextPageError` and leaves
+     `isRefetchError` false, so checking `isRefetchError` would say nothing.
+     A later successful "load more" clears `isError` but only appends a
+     page, so while `isRefetchError` is set make "load more" call `refetch()`
+     instead of `fetchNextPage()`, as the bid history does. With
+     `keepPreviousData`, the previous page shows only while the next one
+     loads: if that fails, `data` is gone and `isLoadingError` is true, so
+     keep a way back, as `AuctionsPage` does with "← Previous"
    - a list item type is the page type indexed: `LoansPage['items'][number]`
    - a one-off call that is not a query or a mutation, like login's, uses
      `client` from `@/api/orpc`: `await client.v1.auth.dev.post({ body: { email } })`

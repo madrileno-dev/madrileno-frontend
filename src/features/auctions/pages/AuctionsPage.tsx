@@ -53,14 +53,29 @@ function AuctionCard({ auction }: { auction: AuctionSummary }) {
 export function AuctionsPage() {
   const t = useTranslations('auction')
   const [offset, setOffset] = useState(0)
-  const { data: page, isPending, isError } = useAuctionsPage(offset)
+  const { data: page, isPending, isLoadingError, isRefetchError } = useAuctionsPage(offset)
 
   return (
     <section className="flex flex-col gap-6">
       <title>{t('listPageTitle')}</title>
       <h1 className="text-2xl font-semibold">{t('listHeading')}</h1>
       {isPending && <p className="text-muted-foreground">{t('loadingList')}</p>}
-      {isError && <p className="text-destructive">{t('errorList')}</p>}
+      {isLoadingError && <p className="text-destructive">{t('errorList')}</p>}
+      {isLoadingError && offset > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+        >
+          {t('prev')}
+        </Button>
+      )}
+      {isRefetchError && (
+        <p role="status" className="text-sm text-destructive">
+          {t('listStale')}
+        </p>
+      )}
       {page &&
         (page.items.length === 0 ? (
           <p className="text-muted-foreground">{t('empty')}</p>

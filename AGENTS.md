@@ -26,6 +26,11 @@ madrileno backend template (sibling repo `../madrileno`).
   errors, narrow with `isDefinedError` and switch exhaustively on `error.code`
   (a `never` default), so a renamed code breaks the build; `problemFrom` only for
   errors outside the contract. Never dispatch on human-readable text.
+- After a write, refresh the queries it touched whether it succeeded or failed
+  (`onSettled`), and keep the user's input when it failed. If that refresh
+  fails, keep the old data on screen and say it may be out of date
+  (`isRefetchError`; `isError` in an infinite list, where a failed "load more"
+  doesn't set `isRefetchError`); never claim it was refreshed.
 
 # Structure
 

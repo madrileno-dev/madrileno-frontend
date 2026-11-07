@@ -57,7 +57,7 @@ export function usePlaceBid(auctionId: string) {
   const queryClient = useQueryClient()
   return useMutation(
     bidsRoute.post.mutationOptions({
-      onSuccess: () => {
+      onSettled: () => {
         void queryClient.invalidateQueries({
           queryKey: auctionRoute.get.key({ input: { params: { auctionId } } }),
         })
