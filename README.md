@@ -33,7 +33,7 @@ committed, so CI and fresh clones need no backend checkout.
 
 ## Quick start
 
-You need Node 22+ (Node ≥20.19 works) and the backend running
+You need Node 24 (`nvm use` reads `.nvmrc`) and the backend running
 ([backend README](../madrileno)):
 
 ```bash
@@ -110,6 +110,8 @@ Design notes:
   `API_BASE_URL` (same-origin for browsers, mirroring the dev proxy), so no
   CORS and no `VITE_API_BASE_URL` are needed unless you deliberately serve
   the API from a different origin.
+- **Node version**: `.nvmrc` sets it for local work and CI. The `Dockerfile`'s
+  `node:24-alpine` base is a separate copy, so bump the two together.
 
 ## PWA (installable + offline shell)
 

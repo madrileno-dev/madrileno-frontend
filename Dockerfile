@@ -1,6 +1,6 @@
 # SSR-mode image. Only needed if you deploy the opt-in SSR server; the default
 # SPA build (`pnpm run build`) is static files for any web server / CDN.
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
@@ -8,7 +8,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build:ssr
 
-FROM node:22-alpine
+FROM node:24-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 RUN corepack enable
